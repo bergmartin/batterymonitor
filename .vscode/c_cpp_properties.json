@@ -10,6 +10,7 @@
             "includePath": [
                 "/home/martin/projects/batterymonitor/include",
                 "/home/martin/projects/batterymonitor/src",
+                "/home/martin/projects/batterymonitor/lib/BatteryMonitor",
                 "/home/martin/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                 "/home/martin/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",
                 "/home/martin/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/esp_additions/freertos",
@@ -246,6 +247,7 @@
                 "path": [
                     "/home/martin/projects/batterymonitor/include",
                     "/home/martin/projects/batterymonitor/src",
+                    "/home/martin/projects/batterymonitor/lib/BatteryMonitor",
                     "/home/martin/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                     "/home/martin/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",
                     "/home/martin/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/esp_additions/freertos",

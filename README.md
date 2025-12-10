@@ -98,6 +98,36 @@ build_flags =
 
 Or use PlatformIO IDE buttons in VS Code.
 
+## Testing
+
+The project includes comprehensive unit tests for all battery monitoring logic.
+
+### Run Tests
+
+**Test Lead-Acid configuration:**
+```bash
+pio test -e esp32dev-leadacid
+```
+
+**Test LiFePO4 configuration:**
+```bash
+pio test -e esp32dev-lifepo4
+```
+
+**Test both configurations:**
+```bash
+pio test
+```
+
+The tests cover:
+- Battery percentage calculations
+- Battery status determination
+- ADC to voltage conversion
+- Voltage divider safety
+- Edge cases and boundary conditions
+
+See `test/README.md` for detailed testing documentation.
+
 ## Configuration
 
 ### Battery Type Selection

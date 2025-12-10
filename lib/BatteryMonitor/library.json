@@ -1,0 +1,15 @@
+{
+  "name": "BatteryMonitor",
+  "version": "1.0.0",
+  "description": "ESP32 battery voltage monitoring library with support for Lead-Acid and LiFePO4 batteries",
+  "keywords": "esp32, battery, monitor, voltage, lead-acid, lifepo4",
+  "authors": {
+    "name": "Battery Monitor Team"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bergmartin/batterymonitor"
+  },
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}
