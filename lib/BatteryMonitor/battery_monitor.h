@@ -1,51 +1,83 @@
 /*
  * Battery Monitor Library
  * 
- * Core functions for battery voltage monitoring
+ * Object-oriented interface for battery voltage monitoring
  */
 
 #ifndef BATTERY_MONITOR_H
 #define BATTERY_MONITOR_H
 
 #include <Arduino.h>
+#include "battery_config.h"
 
-// Battery type definitions
-#define LEAD_ACID 1
-#define LIFEPO4 2
+// Battery status enumeration
+enum class BatteryStatus {
+  FULL,
+  GOOD,
+  LOW_BATTERY,
+  CRITICAL,
+  DEAD
+};
 
-// Default to Lead-Acid if not specified
-#ifndef BATTERY_TYPE
-#define BATTERY_TYPE LEAD_ACID
-#endif
+// Battery reading structure
+struct BatteryReading {
+  float voltage;
+  float percentage;
+  BatteryStatus status;
+  unsigned long timestamp;
+  
+  BatteryReading() 
+    : voltage(0.0f), percentage(0.0f), status(BatteryStatus::DEAD), timestamp(0) {}
+};
 
-// Configuration
+// BatteryMonitor class - Main interface for battery monitoring
+class BatteryMonitor {
+public:
+  // Constructor
+  BatteryMonitor();
+  
+  // Initialization
+  void begin();
+  
+  // Reading functions
+  BatteryReading readBattery();
+  float readVoltage();
+  
+  // Calculation functions
+  static float calculatePercentage(float voltage);
+  static BatteryStatus determineStatus(float voltage);
+  static const char* statusToString(BatteryStatus status);
+  static float adcToVoltage(int adcValue);
+  
+  // Utility functions
+  void printReading(const BatteryReading& reading);
+  void printStartupInfo();
+  
+  // Configuration getters
+  static const char* getBatteryTypeName() { return Config::BATTERY_TYPE_NAME; }
+  static float getMinVoltage() { return Config::Voltage::MINIMUM; }
+  static float getMaxVoltage() { return Config::Voltage::FULL; }
+  
+private:
+  // ADC reading function
+  int readADC();
+};
+
+// Legacy function compatibility (for tests)
+float calculateBatteryPercentage(float voltage);
+String getBatteryStatus(float voltage);
+float adcToBatteryVoltage(int adcReading);
+
+// Legacy constants (for tests)
 extern const int BATTERY_PIN;
 extern const float VOLTAGE_DIVIDER_RATIO;
 extern const float ADC_REFERENCE_VOLTAGE;
 extern const int ADC_RESOLUTION;
-
-// Battery voltage thresholds - configured based on battery type
-#if BATTERY_TYPE == LEAD_ACID
-  extern const char* BATTERY_TYPE_NAME;
-  extern const float VOLTAGE_FULL;
-  extern const float VOLTAGE_NOMINAL;
-  extern const float VOLTAGE_LOW;
-  extern const float VOLTAGE_CRITICAL;
-  extern const float VOLTAGE_MIN;
-#elif BATTERY_TYPE == LIFEPO4
-  extern const char* BATTERY_TYPE_NAME;
-  extern const float VOLTAGE_FULL;
-  extern const float VOLTAGE_NOMINAL;
-  extern const float VOLTAGE_LOW;
-  extern const float VOLTAGE_CRITICAL;
-  extern const float VOLTAGE_MIN;
-#else
-  #error "Invalid BATTERY_TYPE. Use LEAD_ACID or LIFEPO4"
-#endif
-
-// Function declarations
-float calculateBatteryPercentage(float voltage);
-String getBatteryStatus(float voltage);
-float adcToBatteryVoltage(int adcReading);
+extern const char* BATTERY_TYPE_NAME;
+extern const float VOLTAGE_FULL;
+extern const float VOLTAGE_NOMINAL;
+extern const float VOLTAGE_LOW;
+extern const float VOLTAGE_CRITICAL;
+extern const float VOLTAGE_MIN;
 
 #endif // BATTERY_MONITOR_H
