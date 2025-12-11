@@ -4,22 +4,33 @@ This directory contains files for creating a 3D printable enclosure for the ESP3
 
 ## Files
 
-- `battery_monitor_enclosure.scad` - OpenSCAD source file (parametric design)
-- `battery_monitor_bottom.stl` - Bottom part (export from OpenSCAD)
-- `battery_monitor_lid.stl` - Lid part (export from OpenSCAD)
+- `battery_monitor_bottom.scad` - Bottom enclosure part (with mounting posts)
+- `battery_monitor_lid.scad` - Lid part (with ventilation)
+- `battery_monitor_enclosure.scad` - Combined design file (legacy, optional)
+- `README.md` - This documentation
 
 ## Quick Start
 
 ### Option 1: Use OpenSCAD (Recommended)
 
 1. **Install OpenSCAD** (free): https://openscad.org/
-2. **Open** `battery_monitor_enclosure.scad`
-3. **Customize** dimensions if needed (edit parameters at top of file)
-4. **Preview** with F5
-5. **Render** with F6
-6. **Export** each part:
-   - Bottom: File > Export > Export as STL
-   - Lid: Comment/uncomment parts in file, then export
+
+2. **Generate Bottom Part:**
+   - Open `battery_monitor_bottom.scad`
+   - Press F5 to preview
+   - Press F6 to render
+   - File > Export > Export as STL
+   - Save as `battery_monitor_bottom.stl`
+
+3. **Generate Lid Part:**
+   - Open `battery_monitor_lid.scad`
+   - Press F5 to preview
+   - Press F6 to render
+   - File > Export > Export as STL
+   - Save as `battery_monitor_lid.stl`
+
+4. **Customize** dimensions if needed (edit parameters at top of both files)
+   - **Important:** Keep dimensions consistent between both files!
 
 ### Option 2: Download Pre-made STL Files
 
