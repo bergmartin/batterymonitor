@@ -35,9 +35,14 @@ namespace Config {
   constexpr int SAMPLE_DELAY_MS = 10;  // Delay between samples
   
   // Monitoring Configuration
-  constexpr unsigned long READING_INTERVAL_MS = 2000;  // 2 seconds
+  constexpr unsigned long READING_INTERVAL_MS = 3600000;  // 1 hour (3600 seconds)
   constexpr unsigned long STARTUP_DELAY_MS = 1000;
   constexpr unsigned long SERIAL_BAUD_RATE = 115200;
+  
+  // Deep Sleep Configuration
+  constexpr bool ENABLE_DEEP_SLEEP = true;  // Enable power-saving deep sleep
+  constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 3600000000ULL;  // 1 hour in microseconds
+  constexpr int AWAKE_TIME_MS = 5000;  // Time to stay awake for reading and display
   
   // Battery Type Specific Thresholds
   #if BATTERY_TYPE == LEAD_ACID
