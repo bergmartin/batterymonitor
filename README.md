@@ -1,17 +1,31 @@
 # ESP32 Battery Voltage Monitor
 
-A PlatformIO project for monitoring 12V battery voltage using an ESP32 microcontroller.
+A PlatformIO project for monitoring 12V battery voltage using an ESP32 microcontroller with **ultra-low power consumption** through deep sleep mode.
 
-## Features
+## 🌟 Key Features
 
+- **Ultra-Low Power:** Deep sleep mode with only 0.12-0.23 mA average draw (99.8% power reduction!)
+- **Long Battery Life:** Monitor can run for years on the battery it's monitoring
 - Real-time 12V battery voltage monitoring
 - Support for **Lead-Acid** and **LiFePO4** battery types
 - Battery type configured at build time
 - Battery percentage calculation with type-specific thresholds
-- Battery status indicators (FULL, GOOD, LOW, CRITICAL, DEAD)
+- Battery status indicators (FULL, GOOD, LOW_BATTERY, CRITICAL, DEAD)
 - Visual battery level display
 - Low battery warnings
 - Averaged ADC readings for accuracy
+- RTC memory for persistent data across sleep cycles
+
+## ⚡ Power Consumption
+
+| Mode | Current Draw | Battery Life (100Ah) |
+|------|-------------|---------------------|
+| **Deep Sleep (default)** | 0.12-0.23 mA | **50-95 years** 🎉 |
+| Continuous monitoring | 80-160 mA | 26-52 days |
+
+**Deep sleep mode draws less power than the battery loses naturally!**
+
+See [DEEP_SLEEP.md](DEEP_SLEEP.md) for detailed power analysis.
 
 ## Hardware Requirements
 
