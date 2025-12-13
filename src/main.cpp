@@ -69,7 +69,8 @@ void printWakeupReason() {
 
 bool connectWiFi() {
   Serial.print("Connecting to WiFi");
-  WiFi.mode(WIFI_STA);
+  
+  // WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   
   unsigned long startTime = millis();
@@ -85,6 +86,8 @@ bool connectWiFi() {
     return true;
   } else {
     Serial.println(" Failed!");
+    Serial.print("WiFi connection error. Status: ");
+    Serial.println(WiFi.status());
     return false;
   }
 }
@@ -188,9 +191,9 @@ void setup() {
   bootCount++;
   
   // Print boot information
-  Serial.println("\n╔═════════════════════════════════╗");
+  Serial.println("\n╔═════════════════════════════════════╗");
   Serial.println("║  ESP32 Battery Monitor (Deep Sleep) ║");
-  Serial.println("╚═════════════════════════════════╝");
+  Serial.println("╚═════════════════════════════════════╝");
   Serial.print("Boot count: ");
   Serial.println(bootCount);
   

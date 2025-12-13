@@ -58,7 +58,7 @@ namespace Config {
   // #define MQTT_PASSWORD "mqtt-password"  // Optional, can be ""
   // #define MQTT_CLIENT_ID "esp32-battery-monitor"
   constexpr char MQTT_TOPIC_BASE[] = "battery/monitor";  // Base topic for MQTT messages
-  constexpr unsigned long MQTT_TIMEOUT_MS = 5000;  // 5 seconds to connect and publish
+  constexpr unsigned long MQTT_TIMEOUT_MS = 15000;  // 15 seconds to connect and publish
   
   // Battery Type Specific Thresholds
   #if BATTERY_TYPE == LEAD_ACID
