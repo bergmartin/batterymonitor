@@ -6,6 +6,7 @@ A PlatformIO project for monitoring 12V battery voltage using an ESP32 microcont
 
 - **Ultra-Low Power:** Deep sleep mode with only 0.12-0.23 mA average draw (99.8% power reduction!)
 - **Long Battery Life:** Monitor can run for years on the battery it's monitoring
+- **MQTT Integration:** Publish readings to MQTT broker for remote monitoring (Home Assistant, Node-RED, etc.)
 - Real-time 12V battery voltage monitoring
 - Support for **Lead-Acid** and **LiFePO4** battery types
 - Battery type configured at build time
@@ -15,6 +16,7 @@ A PlatformIO project for monitoring 12V battery voltage using an ESP32 microcont
 - Low battery warnings
 - Averaged ADC readings for accuracy
 - RTC memory for persistent data across sleep cycles
+- **3D Printable Enclosure** for professional deployment
 
 ## ⚡ Power Consumption
 
@@ -75,6 +77,29 @@ The ESP32 ADC can only read voltages up to 3.3V. To safely measure a 12V battery
 1. Install [PlatformIO](https://platformio.org/)
 2. Clone or download this project
 3. Open the project in VS Code with PlatformIO extension
+
+### MQTT Configuration (Optional)
+
+To enable remote monitoring via MQTT:
+
+1. **Configure WiFi credentials:**
+   ```bash
+   cd include/
+   cp wifi_credentials.h.example wifi_credentials.h
+   # Edit wifi_credentials.h with your WiFi SSID and password
+   ```
+
+2. **Configure MQTT broker:**
+   ```bash
+   cp mqtt_credentials.h.example mqtt_credentials.h
+   # Edit mqtt_credentials.h with your MQTT broker details
+   ```
+
+3. **See [MQTT.md](MQTT.md) for complete MQTT setup guide**, including:
+   - MQTT broker options (Mosquitto, CloudMQTT, Home Assistant)
+   - Topic structure and JSON format
+   - Home Assistant integration
+   - Testing and troubleshooting
 
 ### Build and Upload
 
@@ -291,6 +316,21 @@ For more accurate readings, you can calibrate the system:
 - Increase SAMPLES count for more averaging
 - Add a small capacitor (0.1µF) across R2
 - Check for electromagnetic interference
+
+**MQTT not connecting:**
+- See [MQTT.md](MQTT.md) troubleshooting section
+- Verify WiFi credentials in `include/wifi_credentials.h`
+- Check MQTT broker is accessible and credentials are correct
+- Test broker with mosquitto-clients: `mosquitto_sub -h broker -t "#"`
+
+## Documentation
+
+- **[WIRING.md](WIRING.md)** - Detailed wiring instructions with buck converter setup
+- **[DEEP_SLEEP.md](DEEP_SLEEP.md)** - Deep sleep implementation and power analysis
+- **[MQTT.md](MQTT.md)** - MQTT setup, configuration, and integration guide
+- **[REFACTORING.md](REFACTORING.md)** - Code structure and refactoring documentation
+- **[test/README.md](test/README.md)** - Testing framework and test documentation
+- **[enclosure/README.md](enclosure/README.md)** - 3D printable enclosure guide
 
 ## License
 

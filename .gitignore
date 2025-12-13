@@ -1,3 +1,8 @@
 .pio
 
+# Credentials (NEVER commit these!)
+include/wifi_credentials.h
+include/mqtt_credentials.h
+
+# STL files (generated from OpenSCAD)
 **/*.stl

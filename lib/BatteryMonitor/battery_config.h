@@ -44,6 +44,22 @@ namespace Config {
   constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 14400000000ULL;  // 4 hours in microseconds
   constexpr int AWAKE_TIME_MS = 5000;  // Time to stay awake for reading and display
   
+  // WiFi Configuration
+  // IMPORTANT: Create wifi_credentials.h with your WiFi credentials:
+  // #define WIFI_SSID "your-wifi-ssid"
+  // #define WIFI_PASSWORD "your-wifi-password"
+  constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds to connect
+  
+  // MQTT Configuration
+  // IMPORTANT: Create mqtt_credentials.h with your MQTT broker details:
+  // #define MQTT_SERVER "mqtt.example.com"
+  // #define MQTT_PORT 1883
+  // #define MQTT_USER "mqtt-user"  // Optional, can be ""
+  // #define MQTT_PASSWORD "mqtt-password"  // Optional, can be ""
+  // #define MQTT_CLIENT_ID "esp32-battery-monitor"
+  constexpr char MQTT_TOPIC_BASE[] = "battery/monitor";  // Base topic for MQTT messages
+  constexpr unsigned long MQTT_TIMEOUT_MS = 5000;  // 5 seconds to connect and publish
+  
   // Battery Type Specific Thresholds
   #if BATTERY_TYPE == LEAD_ACID
     constexpr char BATTERY_TYPE_NAME[] = "Lead-Acid";
