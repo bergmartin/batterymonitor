@@ -48,7 +48,7 @@ namespace Config {
   // IMPORTANT: Create wifi_credentials.h with your WiFi credentials:
   // #define WIFI_SSID "your-wifi-ssid"
   // #define WIFI_PASSWORD "your-wifi-password"
-  constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds to connect
+  constexpr unsigned long WIFI_TIMEOUT_MS = 20000;  // 20 seconds to connect
   
   // MQTT Configuration
   // IMPORTANT: Create mqtt_credentials.h with your MQTT broker details:
