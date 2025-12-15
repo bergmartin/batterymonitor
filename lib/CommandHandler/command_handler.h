@@ -1,0 +1,205 @@
+#ifndef COMMAND_HANDLER_H
+#define COMMAND_HANDLER_H
+
+#include <Arduino.h>
+#include "config_manager.h"
+
+class CommandHandler {
+private:
+    ConfigManager& config;
+    
+public:
+    CommandHandler(ConfigManager& cfg) : config(cfg) {}
+    
+    void checkCommands() {
+        if (Serial.available() > 0) {
+            String command = Serial.readStringUntil('\n');
+            command.trim();
+            
+            // Parse command and arguments
+            String cmd = command;
+            String arg = "";
+            int spaceIndex = command.indexOf(' ');
+            if (spaceIndex > 0) {
+                cmd = command.substring(0, spaceIndex);
+                arg = command.substring(spaceIndex + 1);
+                arg.trim();
+            }
+            cmd.toLowerCase();
+            
+            if (cmd == "reset" && (arg == "nvs" || arg == "")) {
+                handleReset();
+            }
+            else if (cmd == "show" || cmd == "config") {
+                config.printConfig();
+            }
+            else if (cmd == "save") {
+                config.saveConfig();
+                Serial.println("✓ Configuration saved to NVS");
+            }
+            else if (cmd == "set") {
+                handleSet(arg);
+            }
+            else if (cmd == "nosleep" || cmd == "stay" || cmd == "awake") {
+                handleNoSleep();
+            }
+            else if (cmd == "sleep") {
+                handleSleep();
+            }
+            else if (cmd == "reboot" || cmd == "restart") {
+                handleReboot();
+            }
+            else if (cmd == "help") {
+                showHelp();
+            }
+            else if (command.length() > 0) {
+                Serial.print("✗ Unknown command: ");
+                Serial.println(command);
+                Serial.println("Type 'help' for available commands");
+            }
+        }
+    }
+    
+private:
+    void handleReset() {
+        Serial.println("\n╔═══════════════════════════════╗");
+        Serial.println("║   Clearing NVS Storage        ║");
+        Serial.println("╚═══════════════════════════════╝");
+        config.clear();
+        Serial.println("NVS cleared. Rebooting...");
+        delay(1000);
+        ESP.restart();
+    }
+    
+    void handleSet(const String& arg) {
+        int secondSpace = arg.indexOf(' ');
+        if (secondSpace > 0) {
+            String key = arg.substring(0, secondSpace);
+            String value = arg.substring(secondSpace + 1);
+            key.trim();
+            key.toLowerCase();
+            value.trim();
+            
+            bool validKey = true;
+            
+            if (key == "wifi_ssid" || key == "ssid") {
+                config.wifiSSID = value;
+                Serial.print("✓ WiFi SSID set to: ");
+                Serial.println(value);
+            }
+            else if (key == "wifi_password" || key == "wifi_pass" || key == "password") {
+                config.wifiPassword = value;
+                Serial.println("✓ WiFi password set (hidden)");
+            }
+            else if (key == "mqtt_server" || key == "server") {
+                config.mqttServer = value;
+                Serial.print("✓ MQTT server set to: ");
+                Serial.println(value);
+            }
+            else if (key == "mqtt_port" || key == "port") {
+                config.mqttPort = value.toInt();
+                Serial.print("✓ MQTT port set to: ");
+                Serial.println(config.mqttPort);
+            }
+            else if (key == "mqtt_user" || key == "user") {
+                config.mqttUser = value;
+                Serial.print("✓ MQTT user set to: ");
+                Serial.println(value);
+            }
+            else if (key == "mqtt_password" || key == "mqtt_pass") {
+                config.mqttPassword = value;
+                Serial.println("✓ MQTT password set (hidden)");
+            }
+            else if (key == "mqtt_client_id" || key == "client_id" || key == "id") {
+                config.mqttClientID = value;
+                Serial.print("✓ MQTT client ID set to: ");
+                Serial.println(value);
+            }
+            else if (key == "deep_sleep") {
+                handleDeepSleepSet(value, validKey);
+            }
+            else {
+                validKey = false;
+                Serial.print("✗ Unknown key: ");
+                Serial.println(key);
+                Serial.println("Type 'help' for valid keys");
+            }
+            
+            if (validKey) {
+                Serial.println("Remember to type 'save' to persist changes!");
+            }
+        } else {
+            Serial.println("✗ Usage: set <key> <value>");
+            Serial.println("Example: set wifi_ssid MyNetwork");
+        }
+    }
+    
+    void handleDeepSleepSet(String value, bool& validKey) {
+        value.toLowerCase();
+        if (value == "true" || value == "1" || value == "on" || value == "enable") {
+            config.deepSleepEnabled = true;
+            Serial.println("✓ Deep sleep enabled");
+        } else if (value == "false" || value == "0" || value == "off" || value == "disable") {
+            config.deepSleepEnabled = false;
+            Serial.println("✓ Deep sleep disabled");
+        } else {
+            validKey = false;
+            Serial.print("✗ Invalid value: ");
+            Serial.println(value);
+            Serial.println("Use: true/false, on/off, enable/disable, or 1/0");
+        }
+    }
+    
+    void handleNoSleep() {
+        config.deepSleepEnabled = false;
+        config.saveConfig();
+        Serial.println("✓ Deep sleep disabled and saved");
+        Serial.println("Device will stay awake for debugging");
+    }
+    
+    void handleSleep() {
+        config.deepSleepEnabled = true;
+        config.saveConfig();
+        Serial.println("✓ Deep sleep enabled and saved");
+        Serial.println("Device will enter deep sleep after next reading");
+    }
+    
+    void handleReboot() {
+        Serial.println("Rebooting...");
+        delay(500);
+        ESP.restart();
+    }
+    
+    void showHelp() {
+        Serial.println("\n╔═══════════════════════════════════════════════════════╗");
+        Serial.println("║   Battery Monitor - Serial Commands                   ║");
+        Serial.println("╚═══════════════════════════════════════════════════════╝");
+        Serial.println("\nConfiguration Commands:");
+        Serial.println("  show              - Display current configuration");
+        Serial.println("  set <key> <value> - Change a configuration value");
+        Serial.println("  save              - Save configuration to NVS");
+        Serial.println("  reset nvs         - Clear NVS and reboot");
+        Serial.println("\nConfiguration Keys:");
+        Serial.println("  wifi_ssid         - WiFi network name");
+        Serial.println("  wifi_password     - WiFi password");
+        Serial.println("  mqtt_server       - MQTT broker address");
+        Serial.println("  mqtt_port         - MQTT broker port");
+        Serial.println("  mqtt_user         - MQTT username");
+        Serial.println("  mqtt_password     - MQTT password");
+        Serial.println("  mqtt_client_id    - MQTT client identifier");
+        Serial.println("  deep_sleep        - Enable/disable deep sleep (true/false)");
+        Serial.println("\nSystem Commands:");
+        Serial.println("  nosleep           - Disable deep sleep (stay awake)");
+        Serial.println("  sleep             - Enable deep sleep");
+        Serial.println("  reboot            - Restart the device");
+        Serial.println("  help              - Show this help");
+        Serial.println("\nExample Usage:");
+        Serial.println("  > set wifi_ssid MyNetwork");
+        Serial.println("  > set wifi_password MyPassword123");
+        Serial.println("  > set mqtt_server mqtt.home.local");
+        Serial.println("  > save");
+        Serial.println("  > reboot\n");
+    }
+};
+
+#endif // COMMAND_HANDLER_H
