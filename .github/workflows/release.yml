@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -119,6 +122,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          token: ${{ github.token }}
           files: |
             batterymonitor-leadacid-${{ github.ref_name }}.bin
             batterymonitor-lifepo4-${{ github.ref_name }}.bin
@@ -168,5 +172,3 @@ jobs:
             See `checksums.txt` for SHA256 checksums of all binaries.
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
