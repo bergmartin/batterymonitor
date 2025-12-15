@@ -35,7 +35,15 @@ jobs:
       
       - name: Create credential files
         run: |
-          # Create wifi_credentials.h (with placeholder values for build)
+          # Credentials are now stored in NVS (Non-Volatile Storage) on the ESP32
+          # These values are only used as DEFAULTS on the very first boot
+          # After first boot, credentials persist in NVS across all OTA updates
+          
+          # Option A: Placeholder defaults (recommended for public repos)
+          # Each device will use these defaults on first boot only
+          # Configure actual credentials via USB on first upload
+          
+          # Create wifi_credentials.h (with placeholder default values)
           cat > include/wifi_credentials.h << 'EOF'
           #ifndef WIFI_CREDENTIALS_H
           #define WIFI_CREDENTIALS_H
@@ -46,7 +54,7 @@ jobs:
           #endif
           EOF
           
-          # Create mqtt_credentials.h (with placeholder values for build)
+          # Create mqtt_credentials.h (with placeholder default values)
           cat > include/mqtt_credentials.h << 'EOF'
           #ifndef MQTT_CREDENTIALS_H
           #define MQTT_CREDENTIALS_H
@@ -59,6 +67,33 @@ jobs:
           
           #endif
           EOF
+          
+          # Option B: Use GitHub Secrets as defaults (uncomment to use)
+          # Set these secrets in GitHub: Settings -> Secrets and variables -> Actions
+          # These become the default values on first boot for all devices
+          
+          # cat > include/wifi_credentials.h << EOF
+          # #ifndef WIFI_CREDENTIALS_H
+          # #define WIFI_CREDENTIALS_H
+          # 
+          # #define WIFI_SSID "${{ secrets.WIFI_SSID }}"
+          # #define WIFI_PASSWORD "${{ secrets.WIFI_PASSWORD }}"
+          # 
+          # #endif
+          # EOF
+          # 
+          # cat > include/mqtt_credentials.h << EOF
+          # #ifndef MQTT_CREDENTIALS_H
+          # #define MQTT_CREDENTIALS_H
+          # 
+          # #define MQTT_SERVER "${{ secrets.MQTT_SERVER }}"
+          # #define MQTT_PORT ${{ secrets.MQTT_PORT }}
+          # #define MQTT_USER "${{ secrets.MQTT_USER }}"
+          # #define MQTT_PASSWORD "${{ secrets.MQTT_PASSWORD }}"
+          # #define MQTT_CLIENT_ID "${{ secrets.MQTT_CLIENT_ID }}"
+          # 
+          # #endif
+          # EOF
       
       - name: Build firmware (Lead-Acid)
         run: pio run -e esp32dev-leadacid
@@ -93,12 +128,29 @@ jobs:
           body: |
             ## Battery Monitor Firmware ${{ github.ref_name }}
             
+            ### ✅ OTA Updates Now Safe with NVS
+            This firmware uses Non-Volatile Storage (NVS) for credentials.
+            **Your WiFi and MQTT credentials persist across OTA updates!**
+            
             ### Firmware Files
             - `batterymonitor-leadacid.bin` - For Lead-Acid batteries
             - `batterymonitor-lifepo4.bin` - For LiFePO4 batteries
             
-            ### OTA Update
-            To update via MQTT:
+            ### First Time Setup
+            1. Configure credentials locally (one time only):
+               ```bash
+               cp include/wifi_credentials.h.example include/wifi_credentials.h
+               cp include/mqtt_credentials.h.example include/mqtt_credentials.h
+               # Edit files with your actual credentials
+               ```
+            2. Upload via USB:
+               ```bash
+               pio run -e esp32dev-leadacid -t upload
+               ```
+            3. Credentials are saved to NVS and will persist forever!
+            
+            ### OTA Update (After First Setup)
+            Credentials are preserved - just send the filename:
             ```bash
             # For Lead-Acid battery
             mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" -m "batterymonitor-leadacid.bin"
@@ -107,11 +159,13 @@ jobs:
             mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" -m "batterymonitor-lifepo4.bin"
             ```
             
+            ### How It Works
+            - First boot: Reads defaults from firmware, saves to NVS
+            - Subsequent boots: Reads from NVS (ignores firmware defaults)
+            - OTA updates: New firmware, old credentials ✓
+            
             ### Checksums
             See `checksums.txt` for SHA256 checksums of all binaries.
-            
-            ### Installation
-            Users must configure their own `wifi_credentials.h` and `mqtt_credentials.h` files before uploading.
           draft: false
           prerelease: false
         env:
