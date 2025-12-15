@@ -35,7 +35,7 @@ namespace Config {
   constexpr int SAMPLE_DELAY_MS = 10;  // Delay between samples
   
   // Monitoring Configuration
-  constexpr unsigned long READING_INTERVAL_MS = 14400000;  // 4 hours (14400 seconds)
+  constexpr unsigned long READING_INTERVAL_MS = 10000;  // 10 seconds
   constexpr unsigned long STARTUP_DELAY_MS = 1000;
   constexpr unsigned long SERIAL_BAUD_RATE = 115200;
   
