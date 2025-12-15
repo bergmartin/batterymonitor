@@ -6,3 +6,5 @@ include/mqtt_credentials.h
 
 # STL files (generated from OpenSCAD)
 **/*.stl
+
+.vscode

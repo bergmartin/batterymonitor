@@ -1,0 +1,118 @@
+name: Build and Release Firmware
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      
+      - name: Cache PlatformIO
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.platformio
+            .pio
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+      
+      - name: Install PlatformIO
+        run: |
+          pip install --upgrade platformio
+          pio --version
+      
+      - name: Create credential files
+        run: |
+          # Create wifi_credentials.h (with placeholder values for build)
+          cat > include/wifi_credentials.h << 'EOF'
+          #ifndef WIFI_CREDENTIALS_H
+          #define WIFI_CREDENTIALS_H
+          
+          #define WIFI_SSID "your-wifi-ssid"
+          #define WIFI_PASSWORD "your-wifi-password"
+          
+          #endif
+          EOF
+          
+          # Create mqtt_credentials.h (with placeholder values for build)
+          cat > include/mqtt_credentials.h << 'EOF'
+          #ifndef MQTT_CREDENTIALS_H
+          #define MQTT_CREDENTIALS_H
+          
+          #define MQTT_SERVER "mqtt.example.com"
+          #define MQTT_PORT 1883
+          #define MQTT_USER "mqtt-user"
+          #define MQTT_PASSWORD "mqtt-password"
+          #define MQTT_CLIENT_ID "battery-monitor"
+          
+          #endif
+          EOF
+      
+      - name: Build firmware (Lead-Acid)
+        run: pio run -e esp32dev-leadacid
+      
+      - name: Build firmware (LiFePO4)
+        run: pio run -e esp32dev-lifepo4
+      
+      - name: Rename firmware files
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          cp .pio/build/esp32dev-leadacid/firmware.bin batterymonitor-leadacid-${TAG}.bin
+          cp .pio/build/esp32dev-lifepo4/firmware.bin batterymonitor-lifepo4-${TAG}.bin
+          
+          # Also create generic names for "latest" compatibility
+          cp .pio/build/esp32dev-leadacid/firmware.bin batterymonitor-leadacid.bin
+          cp .pio/build/esp32dev-lifepo4/firmware.bin batterymonitor-lifepo4.bin
+      
+      - name: Generate checksums
+        run: |
+          sha256sum batterymonitor-*.bin > checksums.txt
+          cat checksums.txt
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            batterymonitor-leadacid-${{ github.ref_name }}.bin
+            batterymonitor-lifepo4-${{ github.ref_name }}.bin
+            batterymonitor-leadacid.bin
+            batterymonitor-lifepo4.bin
+            checksums.txt
+          body: |
+            ## Battery Monitor Firmware ${{ github.ref_name }}
+            
+            ### Firmware Files
+            - `batterymonitor-leadacid.bin` - For Lead-Acid batteries
+            - `batterymonitor-lifepo4.bin` - For LiFePO4 batteries
+            
+            ### OTA Update
+            To update via MQTT:
+            ```bash
+            # For Lead-Acid battery
+            mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" -m "batterymonitor-leadacid.bin"
+            
+            # For LiFePO4 battery
+            mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" -m "batterymonitor-lifepo4.bin"
+            ```
+            
+            ### Checksums
+            See `checksums.txt` for SHA256 checksums of all binaries.
+            
+            ### Installation
+            Users must configure their own `wifi_credentials.h` and `mqtt_credentials.h` files before uploading.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
