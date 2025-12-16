@@ -23,7 +23,10 @@ public:
     // Deep sleep setting
     bool deepSleepEnabled;
     
-    ConfigManager() : mqttPort(1883), deepSleepEnabled(true) {}
+    // OTA target version
+    String otaTargetVersion;
+    
+    ConfigManager() : mqttPort(1883), deepSleepEnabled(true), otaTargetVersion("") {}
     
     void begin(const char* wifiSsidDefault, const char* wifiPassDefault,
                const char* mqttServerDefault, uint16_t mqttPortDefault,
@@ -61,6 +64,7 @@ public:
         mqttPassword = preferences.getString("mqtt_pass", mqttPassDefault);
         mqttClientID = preferences.getString("mqtt_id", mqttClientIDDefault);
         deepSleepEnabled = preferences.getBool("deep_sleep", true);
+        otaTargetVersion = preferences.getString("ota_target", "");
         
         Serial.println("\n╔═══════════════════════════════════════╗");
         Serial.println("║   Configuration Loaded from NVS       ║");
@@ -85,6 +89,7 @@ public:
         preferences.putString("mqtt_pass", mqttPassword);
         preferences.putString("mqtt_id", mqttClientID);
         preferences.putBool("deep_sleep", deepSleepEnabled);
+        preferences.putString("ota_target", otaTargetVersion);
         
         Serial.println("Configuration saved to NVS");
     }
@@ -132,6 +137,8 @@ public:
         Serial.println(mqttClientID);
         Serial.print("Deep Sleep: ");
         Serial.println(deepSleepEnabled ? "Enabled" : "Disabled");
+        Serial.print("OTA Target Version: ");
+        Serial.println(otaTargetVersion.length() > 0 ? otaTargetVersion : "(not set)");
         Serial.println();
     }
     

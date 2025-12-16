@@ -228,33 +228,6 @@ bool OTAManager::performHTTPUpdate(const String& filename) {
     return false;
 }
 
-String OTAManager::checkLatestVersion() {
-    HTTPClient http;
-    String versionUrl = String(OTA_VERSION_URL);
-    
-    Serial.print("Checking for updates at: ");
-    Serial.println(versionUrl);
-    
-    http.begin(versionUrl);
-    http.setTimeout(5000);  // 5 second timeout
-    
-    int httpCode = http.GET();
-    String latestVersion = "";
-    
-    if (httpCode == HTTP_CODE_OK) {
-        latestVersion = http.getString();
-        latestVersion.trim();  // Remove whitespace
-        Serial.print("Latest version available: ");
-        Serial.println(latestVersion);
-    } else {
-        Serial.print("Failed to check version. HTTP code: ");
-        Serial.println(httpCode);
-    }
-    
-    http.end();
-    return latestVersion;
-}
-
 bool OTAManager::isNewerVersion(const String& latestVersion, const String& currentVersion) {
     if (latestVersion.length() == 0 || currentVersion.length() == 0) {
         return false;
@@ -285,22 +258,25 @@ bool OTAManager::checkForUpdates() {
     Serial.print("Current version: ");
     Serial.println(currentVersion);
     
-    String latestVersion = checkLatestVersion();
+    String targetVersion = config.otaTargetVersion;
     
-    if (latestVersion.length() == 0) {
-        Serial.println("Unable to check for updates");
+    if (targetVersion.length() == 0) {
+        Serial.println("No target OTA version configured");
         return false;
     }
     
-    if (isNewerVersion(latestVersion, currentVersion)) {
+    Serial.print("Target version: ");
+    Serial.println(targetVersion);
+    
+    if (isNewerVersion(targetVersion, currentVersion)) {
         Serial.println("\n✓ New version available!");
         Serial.print("  Current: ");
         Serial.println(currentVersion);
-        Serial.print("  Latest:  ");
-        Serial.println(latestVersion);
+        Serial.print("  Target:  ");
+        Serial.println(targetVersion);
         
         // Construct firmware filename based on version
-        String firmwareFilename = "firmware-v" + latestVersion + ".bin";
+        String firmwareFilename = "firmware-v" + targetVersion + ".bin";
         
         Serial.print("Triggering update to: ");
         Serial.println(firmwareFilename);

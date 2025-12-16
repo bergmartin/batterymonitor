@@ -40,6 +40,9 @@ void CommandHandler::checkCommands() {
         else if (cmd == "reboot" || cmd == "restart") {
             handleReboot();
         }
+        else if (cmd == "otaver") {
+            handleOTAVersion(arg);
+        }
         else if (cmd == "help") {
             showHelp();
         }
@@ -108,6 +111,11 @@ void CommandHandler::handleSet(const String& arg) {
         else if (key == "deep_sleep") {
             handleDeepSleepSet(value, validKey);
         }
+        else if (key == "ota_version" || key == "ota_target" || key == "otaver") {
+            config.otaTargetVersion = value;
+            Serial.print("✓ OTA target version set to: ");
+            Serial.println(value);
+        }
         else {
             validKey = false;
             Serial.print("✗ Unknown key: ");
@@ -160,6 +168,22 @@ void CommandHandler::handleReboot() {
     ESP.restart();
 }
 
+void CommandHandler::handleOTAVersion(const String& version) {
+    if (version.length() > 0) {
+        config.otaTargetVersion = version;
+        config.saveConfig();
+        Serial.print("✓ OTA target version set to: ");
+        Serial.println(version);
+        Serial.println("✓ Configuration saved");
+        Serial.println("Device will check for this version on next wake");
+    } else {
+        Serial.println("Current OTA target version: " + 
+                      (config.otaTargetVersion.length() > 0 ? config.otaTargetVersion : "(not set)"));
+        Serial.println("Usage: otaver <version>");
+        Serial.println("Example: otaver 1.0.2");
+    }
+}
+
 void CommandHandler::showHelp() {
     Serial.println("\n╔═══════════════════════════════════════════════════════╗");
     Serial.println("║   Battery Monitor - Serial Commands                   ║");
@@ -178,14 +202,17 @@ void CommandHandler::showHelp() {
     Serial.println("  mqtt_password     - MQTT password");
     Serial.println("  mqtt_client_id    - MQTT client identifier");
     Serial.println("  deep_sleep        - Enable/disable deep sleep (true/false)");
+    Serial.println("  ota_version       - Target OTA version (e.g., 1.0.1)");
     Serial.println("\nSystem Commands:");
     Serial.println("  nosleep           - Disable deep sleep (stay awake)");
     Serial.println("  sleep             - Enable deep sleep");
+    Serial.println("  otaver <version>  - Set target OTA version (shortcut)");
     Serial.println("  reboot            - Restart the device");
     Serial.println("  help              - Show this help message");
     Serial.println("\nExamples:");
     Serial.println("  set wifi_ssid MyHomeNetwork");
     Serial.println("  set mqtt_server 192.168.1.100");
     Serial.println("  set deep_sleep false");
+    Serial.println("  otaver 1.0.2");
     Serial.println("  save");
 }

@@ -13,14 +13,6 @@
 #define LED_BUILTIN 2
 #endif
 
-#ifndef OTA_BASE_URL
-#define OTA_BASE_URL "https://github.com/USERNAME/REPO/releases/download/"
-#endif
-
-#ifndef OTA_VERSION_URL
-#define OTA_VERSION_URL "https://raw.githubusercontent.com/USERNAME/REPO/main/version.txt"
-#endif
-
 #ifndef FIRMWARE_VERSION
 #define FIRMWARE_VERSION "1.0.0"
 #endif
@@ -35,7 +27,6 @@ private:
     bool performHTTPUpdate(const String& filename);
     void saveOTATrigger(const String& filename);
     void clearOTATrigger();
-    String checkLatestVersion();  // Check server for latest version
     bool isNewerVersion(const String& latestVersion, const String& currentVersion);
     
 public:

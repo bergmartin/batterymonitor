@@ -41,7 +41,7 @@ namespace Config {
   
   // OTA Configuration
   constexpr bool AUTO_CHECK_OTA = true;  // Automatically check for updates on wake
-  constexpr char OTA_VERSION_URL[] = "https://raw.githubusercontent.com/bergmartin/batterymonitor/main/version.txt";  // URL to check latest version
+  // Note: Target OTA version is now stored in ConfigManager (use 'otaver' command to set)
   
   // Deep Sleep Configuration
   constexpr bool ENABLE_DEEP_SLEEP = true;  // Enable power-saving deep sleep

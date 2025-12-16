@@ -14,6 +14,7 @@ private:
     void handleNoSleep();
     void handleSleep();
     void handleReboot();
+    void handleOTAVersion(const String& version);
     void showHelp();
     
 public:
