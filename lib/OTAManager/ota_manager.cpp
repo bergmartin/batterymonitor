@@ -182,6 +182,7 @@ bool OTAManager::performHTTPUpdate(const String& filename) {
     
     // Configure HTTPUpdate for GitHub redirects
     httpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
+    httpUpdate.setTimeout(30000);  // 30 second timeout for large firmware files
     httpUpdate.setLedPin(LED_BUILTIN, LOW);
     
     // Add callbacks for update progress
@@ -218,10 +219,11 @@ bool OTAManager::performHTTPUpdate(const String& filename) {
     switch (ret) {
         case HTTP_UPDATE_FAILED:
             Serial.printf("Update failed: %s\n", httpUpdate.getLastErrorString().c_str());
+            Serial.printf("HTTP error code: %d\n", httpUpdate.getLastError());
             return false;
             
         case HTTP_UPDATE_NO_UPDATES:
-            Serial.println("No updates available");
+            Serial.println("No updates available (same version already installed)");
             return false;
             
         case HTTP_UPDATE_OK:
