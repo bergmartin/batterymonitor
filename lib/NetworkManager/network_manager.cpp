@@ -137,12 +137,31 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
     snprintf(value, sizeof(value), "%d", bootCount);
     mqttClient.publish(topic, value, true);
     
+    // Hostname
+    snprintf(topic, sizeof(topic), "%s/hostname", Config::MQTT_TOPIC_BASE);
+    mqttClient.publish(topic, config.mqttClientID.c_str(), true);
+    
+    // Firmware version
+    snprintf(topic, sizeof(topic), "%s/version", Config::MQTT_TOPIC_BASE);
+    #ifdef FIRMWARE_VERSION
+    mqttClient.publish(topic, FIRMWARE_VERSION, true);
+    #else
+    mqttClient.publish(topic, "unknown", true);
+    #endif
+    
     // JSON payload with all data
     snprintf(topic, sizeof(topic), "%s/json", Config::MQTT_TOPIC_BASE);
-    char json[300];
+    char json[400];
     snprintf(json, sizeof(json), 
-        "{\"voltage\":%.2f,\"percentage\":%.1f,\"status\":\"%s\",\"type\":\"%s\",\"boot\":%d,\"rssi\":%d}",
-        reading.voltage, reading.percentage, statusStr, Config::BATTERY_TYPE_NAME, bootCount, WiFi.RSSI());
+        "{\"voltage\":%.2f,\"percentage\":%.1f,\"status\":\"%s\",\"type\":\"%s\",\"boot\":%d,\"rssi\":%d,\"hostname\":\"%s\",\"version\":\"%s\"}",
+        reading.voltage, reading.percentage, statusStr, Config::BATTERY_TYPE_NAME, bootCount, WiFi.RSSI(), 
+        config.mqttClientID.c_str(), 
+        #ifdef FIRMWARE_VERSION
+        FIRMWARE_VERSION
+        #else
+        "unknown"
+        #endif
+    );
     mqttClient.publish(topic, json, true);
     
     Serial.println("Published to MQTT:");
