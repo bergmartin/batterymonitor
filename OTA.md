@@ -1,145 +1,193 @@
 # OTA (Over-The-Air) Updates
 
-The battery monitor supports two methods for OTA updates:
+The battery monitor supports multiple OTA update methods with persistent trigger support and automatic version checking.
 
-## 1. HTTP OTA from GitHub (Recommended)
+## Features
 
-Download and install firmware directly from a GitHub release. The base URL is compiled into the firmware for security - only the filename is sent via MQTT.
+- ✅ **Persistent OTA Triggers** - MQTT OTA requests survive deep sleep and are processed on next boot
+- ✅ **Automatic Version Checking** - Device can auto-check and install newer firmware versions  
+- ✅ **Config-Based Updates** - Set target version via serial command or MQTT
+- ✅ **Secure** - Base URL compiled into firmware, only filenames accepted via MQTT
+- ✅ **Deep Sleep Compatible** - OTA triggers persist across sleep cycles
 
-### Setup
+## Update Methods
 
-1. Configure the base URL in `platformio.ini`:
-```ini
-build_flags = 
-  -D BATTERY_TYPE=LEAD_ACID
-  -D OTA_BASE_URL='"https://github.com/USERNAME/REPO/releases/download/latest/"'
-```
+### 1. Automatic Version-Based Updates (Recommended)
 
-2. Build your firmware and create a GitHub release with the `.bin` file
+Set a target version and the device automatically downloads and installs it on next wake.
 
-### Usage
-
-Publish **only the filename** to the MQTT topic:
-
+**Configure target version via serial:**
 ```bash
-# Send just the filename - base URL is compiled into firmware
-mosquitto_pub -h YOUR_MQTT_BROKER \
-  -t "battery/monitor/ota" \
-  -m "firmware.bin"
+# Connect via serial and type:
+otaver 1.0.2
+save
 
-# Or with version-specific filename
-mosquitto_pub -h YOUR_MQTT_BROKER \
-  -t "battery/monitor/ota" \
-  -m "batterymonitor-v1.0.1.bin"
+# Device will check for and install v1.0.2 on next wake
 ```
 
 **How it works:**
-1. Device receives MQTT message with **filename only**
-2. Constructs full URL: `OTA_BASE_URL + filename`
-3. Downloads firmware binary from the constructed URL
-4. Installs update and reboots automatically
-5. Update completes in ~30-60 seconds
+1. Set target version using `otaver` command
+2. On every wake, device compares current version with target version
+3. If target is newer, downloads `firmware-leadacid-v1.0.2.bin` (or lifepo4)
+4. Installs and reboots automatically
+5. Version persists in NVS storage
 
-**Security Features:**
-- ✅ Base URL is compiled into firmware (cannot be changed remotely)
-- ✅ Only accepts filenames - rejects paths, URLs, or special characters
-- ✅ Prevents unauthorized firmware sources
-- ✅ No risk of arbitrary URL injection
+**Enable/Disable:**
+```cpp
+// In battery_config.h
+constexpr bool AUTO_CHECK_OTA = true;  // Set to false to disable
+```
 
-**Advantages:**
-- Secure - base URL locked at compile time
-- No direct network access needed to ESP32
-- Can update devices anywhere (through MQTT broker)
-- Automated deployment possible via GitHub Actions
-- Works great for remote/field deployments
+### 2. Manual MQTT-Triggered Updates
 
-## 2. ArduinoOTA (Network Upload)
+Immediately trigger an OTA update via MQTT. The trigger persists even if device is in deep sleep.
 
-Direct network upload using PlatformIO or Arduino IDE.
-
-### Usage
-
-Trigger OTA mode without a URL:
-
+**Trigger with specific firmware file:**
 ```bash
-# Trigger OTA mode (no URL = ArduinoOTA mode)
+mosquitto_pub -h YOUR_MQTT_BROKER \
+  -t "battery/monitor/ota" \
+  -m "firmware-leadacid-v1.0.2.bin"
+```
+
+**Trigger ArduinoOTA mode:**
+```bash
 mosquitto_pub -h YOUR_MQTT_BROKER \
   -t "battery/monitor/ota" \
   -m "update"
 ```
 
-Then upload via PlatformIO:
+**Deep Sleep Behavior:**
+- If device is awake: OTA starts immediately
+- If device is in deep sleep: Trigger is saved to persistent storage
+- On next wake: Device checks for pending OTA and processes it before normal operation
 
+### 3. ArduinoOTA (Network Upload)
+
+Direct network upload using PlatformIO or Arduino IDE.
+
+**Upload directly via network:**
 ```bash
-# Configure platformio.ini first:
+# Configure platformio.ini with device IP:
 # upload_protocol = espota
 # upload_port = 192.168.1.XXX
 
 pio run -t upload
 ```
 
-**How it works:**
-1. Device enters OTA mode and waits 5 minutes
-2. Upload firmware via WiFi using PlatformIO
-3. Device installs and reboots
+**Or trigger OTA mode via MQTT first:**
+```bash
+mosquitto_pub -h YOUR_MQTT_BROKER \
+  -t "battery/monitor/ota" \
+  -m "update"
+  
+# Device waits 1 minute in OTA mode
+# Then upload via PlatformIO
+pio run -t upload
+```
 
-**Advantages:**
-- Good for local development
-- No web server needed
-- Protected by optional password
+## Configuration
 
-## Getting the Firmware Binary
+### Base URL Setup
 
-### From PlatformIO Build
+Configure the base URL in `platformio.ini` (for GitHub releases):
+```ini
+build_flags = 
+  -D BATTERY_TYPE=LEAD_ACID
+  -D OTA_BASE_URL='"https://github.com/USERNAME/REPO/releases/download/"'
+```
+
+Or define in `ota_manager.h`:
+```cpp
+#ifndef OTA_BASE_URL
+#define OTA_BASE_URL "https://github.com/USERNAME/REPO/releases/download/"
+#endif
+```
+
+### Serial Commands
+
+```bash
+# Set target OTA version
+otaver 1.0.2
+
+# View current configuration (includes target version)
+show
+
+# Save configuration to NVS
+save
+```
+
+### Firmware Naming Convention
+
+The device expects firmware files with version numbers:
+- Lead-Acid: `firmware-leadacid-v1.0.2.bin`
+- LiFePO4: `firmware-lifepo4-v1.0.2.bin`
+
+These are automatically generated by the GitHub Actions workflow.
+
+## Release Workflow
+
+### Creating a New Release
+
+**1. Tag the version:**
+```bash
+git tag v1.0.2
+git push origin v1.0.2
+```
+
+**2. GitHub Actions automatically:**
+- Builds firmware with version embedded: `FIRMWARE_VERSION="1.0.2"`
+- Creates versioned binaries:
+  - `firmware-leadacid-v1.0.2.bin`
+  - `firmware-lifepo4-v1.0.2.bin`
+- Creates GitHub release with all files
+
+**3. Update devices:**
+
+**Option A: Automatic (via serial config):**
+```bash
+# Connect via serial and set target version
+otaver 1.0.2
+save
+# Device updates on next wake cycle
+```
+
+**Option B: Manual MQTT trigger:**
+```bash
+mosquitto_pub -h BROKER \
+  -t "battery/monitor/ota" \
+  -m "firmware-leadacid-v1.0.2.bin"
+```
+
+### Manual Build
+
+Get firmware binary from PlatformIO build:
 
 ```bash
 # Build the project
 pio run
 
-# Binary location:
-.pio/build/esp32dev/firmware.bin
+# Binary locations:
+.pio/build/esp32dev-leadacid/firmware.bin
+.pio/build/esp32dev-lifepo4/firmware.bin
 ```
 
-### Host on GitHub Releases
+### Testing with Local Server
 
-1. Create a new release on GitHub
-2. Attach the `firmware.bin` file
-3. Configure base URL in `platformio.ini`:
-   ```ini
-   -D OTA_BASE_URL='"https://github.com/USERNAME/REPO/releases/download/v1.0.1/"'
-   ```
-4. Send just the filename via MQTT:
-   ```bash
-   mosquitto_pub -h BROKER -t "battery/monitor/ota" -m "firmware.bin"
-   ```
+For local testing without GitHub:
 
-### Using "latest" Tag
-
-For automatic latest release:
+1. **Configure local base URL:**
 ```ini
--D OTA_BASE_URL='"https://github.com/USERNAME/REPO/releases/latest/download/"'
-```
-
-Then always use the same filename in your releases:
-```bash
-mosquitto_pub -h BROKER -t "battery/monitor/ota" -m "batterymonitor.bin"
-```
-
-### Temporary Local Server (Testing)
-
-For local testing, configure local base URL:
-```ini
+# In platformio.ini
 -D OTA_BASE_URL='"http://192.168.1.100:8000/"'
 ```
 
-Then serve the firmware:
+2. **Serve the firmware:**
 ```bash
-# Python 3
-cd .pio/build/esp32dev/
+cd .pio/build/esp32dev-leadacid/
 python -m http.server 8000
 ```
 
-Trigger update:
+3. **Trigger update:**
 ```bash
 mosquitto_pub -h BROKER -t "battery/monitor/ota" -m "firmware.bin"
 ```
@@ -166,85 +214,51 @@ The device automatically rejects:
 
 ### Password Protection
 
-Uncomment in `main.cpp`:
+Optionally protect ArduinoOTA with a password in `ota_manager.cpp`:
 ```cpp
-ArduinoOTA.setPassword("your_password");
+void OTAManager::setup() {
+    ArduinoOTA.setHostname(config.mqttClientID.c_str());
+    ArduinoOTA.setPassword("your_password");  // Uncomment and set password
+    // ... rest of setup
+}
 ```
 
-## Automation with GitHub Actions
+## How Persistent OTA Works
 
-Example workflow with versioned releases:
+### Storage Mechanism
+OTA triggers are stored in ESP32's Preferences (NVS - Non-Volatile Storage):
+- Survives deep sleep
+- Survives power loss
+- Survives reboots
+- Persists until OTA completes or times out
 
-Create `.github/workflows/release.yml`:
-
-```yaml
-name: Build and Release Firmware
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-      
-      - name: Install PlatformIO
-        run: pip install platformio
-      
-      - name: Build firmware
-        run: |
-          # Update OTA_BASE_URL to point to this release
-          TAG=${GITHUB_REF#refs/tags/}
-          sed -i "s|releases/download/latest/|releases/download/${TAG}/|g" platformio.ini
-          pio run -e esp32dev
-      
-      - name: Rename firmware with version
-        run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          cp .pio/build/esp32dev/firmware.bin batterymonitor-${TAG}.bin
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            batterymonitor-${{ github.ref_name }}.bin
-            .pio/build/esp32dev/firmware.bin
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+### Boot Sequence
+```
+1. Device wakes from deep sleep
+2. Check for pending OTA trigger in NVS
+3. If pending:
+   - Connect to WiFi
+   - Download and install firmware
+   - Clear OTA trigger on success/failure
+4. Continue normal operation
 ```
 
-### Using "latest" for auto-updates
-
-For automatic latest version (recommended):
-
-1. Configure base URL to always use `latest`:
-```ini
--D OTA_BASE_URL='"https://github.com/USERNAME/REPO/releases/latest/download/"'
+### Automatic Version Check Flow
 ```
-
-2. Always name your firmware file the same (e.g., `batterymonitor.bin`)
-
-3. Create releases - GitHub automatically updates "latest"
-
-4. Trigger updates with just the filename:
-```bash
-mosquitto_pub -h BROKER -t "battery/monitor/ota" -m "batterymonitor.bin"
+1. Device wakes from deep sleep
+2. If AUTO_CHECK_OTA enabled:
+   - Read otaTargetVersion from config
+   - Compare with current FIRMWARE_VERSION
+   - If target > current:
+     - Construct filename: firmware-v{target}.bin
+     - Download and install
+3. Continue normal operation
 ```
-
-All devices automatically get the newest firmware from the latest release!
 
 ## Troubleshooting
 
 ### Update Fails
-- Check base URL is correct in `platformio.ini`
+- Check base URL is correct in `platformio.ini` or `ota_manager.h`
 - Verify filename matches exactly (case-sensitive)
 - Ensure firmware file exists at `BASE_URL + filename`
 - Check WiFi connection is stable
@@ -256,23 +270,95 @@ If you see "ERROR: Invalid filename", the message contained:
 - A path separator (`/` or `\`)
 - A colon (`:`)
 - A full URL
-- Only send the filename: `firmware.bin` not `https://...`
+- Only send the filename: `firmware-leadacid-v1.0.2.bin`
 
-### Device Doesn't Respond
+### Device Doesn't Respond to MQTT
 - Verify MQTT topic matches: `battery/monitor/ota`
-- Check device is awake (not in deep sleep)
-- Wait for next wake cycle (default: 4 hours)
+- Check device is connected to MQTT broker
+- If in deep sleep: Trigger persists and will process on next wake
 - Verify MQTT message was received (check broker logs)
+
+### OTA Trigger Not Persisting
+- Check serial output for "OTA trigger saved to persistent storage"
+- Verify NVS is not full (unlikely with default settings)
+- If cleared manually, use: `reset nvs` command restarts fresh
+
+### Version Check Not Working
+- Ensure AUTO_CHECK_OTA is true in battery_config.h
+- Set target version: `otaver 1.0.2` and `save`
+- Verify target version in config: `show` command
+- Check serial output for version comparison logs
 
 ### Progress Monitoring
 - Watch serial output during update
-- Check MQTT for status messages
-- HTTP updates show download progress
+- HTTP updates show download progress percentage
+- OTA timeout: 60 seconds for ArduinoOTA mode
+- Check for "OTA trigger cleared" message on completion
 
 ## Power Considerations
 
 During OTA updates, the device:
 - Stays awake (80-160 mA current draw)
-- ArduinoOTA mode: 5 minutes maximum
+- ArduinoOTA mode: 60 seconds timeout
 - HTTP update: ~30-60 seconds typical
 - Returns to deep sleep after completion
+
+**Power Budget:**
+- Normal operation: ~0.1-0.3 mA average (99.9% in deep sleep)
+- During OTA: ~100 mA for 30-60 seconds
+- Minimal impact on battery life for infrequent updates
+
+## Examples
+
+### Complete Update Workflow
+
+**1. Release new firmware:**
+```bash
+# Tag and push
+git tag v1.0.3
+git push origin v1.0.3
+
+# GitHub Actions builds and releases automatically
+```
+
+**2. Update a single device (serial):**
+```bash
+# Connect via serial
+otaver 1.0.3
+save
+
+# Device updates on next wake
+```
+
+**3. Update all devices (MQTT broadcast):**
+```bash
+# Option A: Set via MQTT to config (if implemented)
+# Or use serial on each device
+
+# Option B: Force immediate update
+mosquitto_pub -h BROKER \
+  -t "battery/monitor/ota" \
+  -m "firmware-leadacid-v1.0.3.bin"
+```
+
+### Rollback to Previous Version
+
+```bash
+# Via serial
+otaver 1.0.1
+save
+
+# Device downloads v1.0.1 on next wake
+```
+
+### Emergency Update (Device in Deep Sleep)
+
+```bash
+# Trigger via MQTT
+mosquitto_pub -h BROKER \
+  -t "battery/monitor/ota" \
+  -m "firmware-leadacid-v1.0.4.bin"
+
+# Trigger persists in NVS
+# Processes automatically on next wake (up to 4 hours later)
+```
