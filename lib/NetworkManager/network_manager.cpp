@@ -108,22 +108,11 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
         return;
     }
     
-    // Publish individual values
-    char topic[100];
+    char topic[150];
     char value[20];
-    
-    // Voltage
-    snprintf(topic, sizeof(topic), "%s/voltage", Config::MQTT_TOPIC_BASE);
-    snprintf(value, sizeof(value), "%.2f", reading.voltage);
-    mqttClient.publish(topic, value, true);  // retained
-    
-    // Percentage
-    snprintf(topic, sizeof(topic), "%s/percentage", Config::MQTT_TOPIC_BASE);
-    snprintf(value, sizeof(value), "%.1f", reading.percentage);
-    mqttClient.publish(topic, value, true);
+    const char* hostname = WiFi.getHostname();
     
     // Status as text
-    snprintf(topic, sizeof(topic), "%s/status", Config::MQTT_TOPIC_BASE);
     const char* statusStr = "";
     switch(reading.status) {
         case BatteryStatus::FULL: statusStr = "FULL"; break;
@@ -132,47 +121,38 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
         case BatteryStatus::CRITICAL: statusStr = "CRITICAL"; break;
         case BatteryStatus::DEAD: statusStr = "DEAD"; break;
     }
+    
+    // Publish to Home Assistant state topics
+    // Voltage
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/voltage/state", hostname);
+    snprintf(value, sizeof(value), "%.2f", reading.voltage);
+    mqttClient.publish(topic, value, true);
+    
+    // Battery percentage
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/percentage/state", hostname);
+    snprintf(value, sizeof(value), "%.1f", reading.percentage);
+    mqttClient.publish(topic, value, true);
+    
+    // Status
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/status/state", hostname);
     mqttClient.publish(topic, statusStr, true);
     
-    // Battery type
-    snprintf(topic, sizeof(topic), "%s/type", Config::MQTT_TOPIC_BASE);
-    mqttClient.publish(topic, Config::BATTERY_TYPE_NAME, true);
-    
     // Boot count
-    snprintf(topic, sizeof(topic), "%s/boot_count", Config::MQTT_TOPIC_BASE);
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/boot_count/state", hostname);
     snprintf(value, sizeof(value), "%d", bootCount);
     mqttClient.publish(topic, value, true);
     
-    // Hostname
-    snprintf(topic, sizeof(topic), "%s/hostname", Config::MQTT_TOPIC_BASE);
-    mqttClient.publish(topic, WiFi.getHostname(), true);
-    
-    // Firmware version
-    snprintf(topic, sizeof(topic), "%s/version", Config::MQTT_TOPIC_BASE);
-    #ifdef FIRMWARE_VERSION
-    mqttClient.publish(topic, FIRMWARE_VERSION, true);
-    #else
-    mqttClient.publish(topic, "unknown", true);
-    #endif
-    
-    // JSON payload with all data
-    snprintf(topic, sizeof(topic), "%s/json", Config::MQTT_TOPIC_BASE);
-    char json[400];
+    // JSON state for RSSI (used by RSSI sensor value_template)
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/state/state", hostname);
+    char json[300];
     snprintf(json, sizeof(json), 
-        "{\"voltage\":%.2f,\"percentage\":%.1f,\"status\":\"%s\",\"type\":\"%s\",\"boot\":%d,\"rssi\":%d,\"hostname\":\"%s\",\"version\":\"%s\"}",
-        reading.voltage, reading.percentage, statusStr, Config::BATTERY_TYPE_NAME, bootCount, WiFi.RSSI(), 
-        WiFi.getHostname(), 
-        #ifdef FIRMWARE_VERSION
-        FIRMWARE_VERSION
-        #else
-        "unknown"
-        #endif
-    );
+        "{\"voltage\":%.2f,\"percentage\":%.1f,\"status\":\"%s\",\"type\":\"%s\",\"boot\":%d,\"rssi\":%d}",
+        reading.voltage, reading.percentage, statusStr, Config::BATTERY_TYPE_NAME, bootCount, WiFi.RSSI());
     mqttClient.publish(topic, json, true);
     
-    Serial.println("Published to MQTT:");
-    Serial.print("  Topic: ");
-    Serial.println(Config::MQTT_TOPIC_BASE);
+    Serial.println("Published to Home Assistant MQTT:");
+    Serial.print("  Device: ");
+    Serial.println(hostname);
     Serial.print("  JSON: ");
     Serial.println(json);
 }
@@ -199,36 +179,36 @@ void NetworkManager::publishHomeAssistantDiscovery() {
     // Voltage sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/voltage/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Battery Voltage\",\"state_topic\":\"%s/voltage\",\"unit_of_measurement\":\"V\",\"device_class\":\"voltage\",\"state_class\":\"measurement\",\"unique_id\":\"%s_voltage\",%s}",
-        Config::MQTT_TOPIC_BASE, hostname, deviceInfo);
+        "{\"name\":\"Battery Voltage\",\"state_topic\":\"homeassistant/sensor/%s/voltage/state\",\"unit_of_measurement\":\"V\",\"device_class\":\"voltage\",\"state_class\":\"measurement\",\"unique_id\":\"%s_voltage\",%s}",
+        hostname, hostname, deviceInfo);
     mqttClient.publish(topic, payload, true);
     
     // Battery percentage sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/percentage/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Battery Level\",\"state_topic\":\"%s/percentage\",\"unit_of_measurement\":\"%%\",\"device_class\":\"battery\",\"state_class\":\"measurement\",\"unique_id\":\"%s_percentage\",%s}",
-        Config::MQTT_TOPIC_BASE, hostname, deviceInfo);
+        "{\"name\":\"Battery Level\",\"state_topic\":\"homeassistant/sensor/%s/percentage/state\",\"unit_of_measurement\":\"%%\",\"device_class\":\"battery\",\"state_class\":\"measurement\",\"unique_id\":\"%s_percentage\",%s}",
+        hostname, hostname, deviceInfo);
     mqttClient.publish(topic, payload, true);
     
     // Status sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/status/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Battery Status\",\"state_topic\":\"%s/status\",\"icon\":\"mdi:battery-check\",\"unique_id\":\"%s_status\",%s}",
-        Config::MQTT_TOPIC_BASE, hostname, deviceInfo);
+        "{\"name\":\"Battery Status\",\"state_topic\":\"homeassistant/sensor/%s/status/state\",\"icon\":\"mdi:battery-check\",\"unique_id\":\"%s_status\",%s}",
+        hostname, hostname, deviceInfo);
     mqttClient.publish(topic, payload, true);
     
     // RSSI sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/rssi/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"WiFi Signal\",\"state_topic\":\"%s/json\",\"unit_of_measurement\":\"dBm\",\"device_class\":\"signal_strength\",\"state_class\":\"measurement\",\"value_template\":\"{{ value_json.rssi }}\",\"unique_id\":\"%s_rssi\",%s}",
-        Config::MQTT_TOPIC_BASE, hostname, deviceInfo);
+        "{\"name\":\"WiFi Signal\",\"state_topic\":\"homeassistant/sensor/%s/state/state\",\"unit_of_measurement\":\"dBm\",\"device_class\":\"signal_strength\",\"state_class\":\"measurement\",\"value_template\":\"{{ value_json.rssi }}\",\"unique_id\":\"%s_rssi\",%s}",
+        hostname, hostname, deviceInfo);
     mqttClient.publish(topic, payload, true);
     
     // Boot count sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/boot_count/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Boot Count\",\"state_topic\":\"%s/boot_count\",\"icon\":\"mdi:restart\",\"state_class\":\"total_increasing\",\"unique_id\":\"%s_boot\",%s}",
-        Config::MQTT_TOPIC_BASE, hostname, deviceInfo);
+        "{\"name\":\"Boot Count\",\"state_topic\":\"homeassistant/sensor/%s/boot_count/state\",\"icon\":\"mdi:restart\",\"state_class\":\"total_increasing\",\"unique_id\":\"%s_boot\",%s}",
+        hostname, hostname, deviceInfo);
     mqttClient.publish(topic, payload, true);
     
     Serial.println("Home Assistant discovery published");
