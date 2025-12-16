@@ -1,7 +1,44 @@
 #include "ota_manager.h"
+#include "battery_config.h"
 
 OTAManager::OTAManager(ConfigManager& cfg) 
     : config(cfg), otaRequested(false), otaFilename("") {}
+
+void OTAManager::saveOTATrigger(const String& filename) {
+    preferences.begin("ota", false);
+    preferences.putBool("pending", true);
+    preferences.putString("filename", filename);
+    preferences.end();
+    Serial.println("OTA trigger saved to persistent storage");
+}
+
+void OTAManager::clearOTATrigger() {
+    preferences.begin("ota", false);
+    preferences.putBool("pending", false);
+    preferences.putString("filename", "");
+    preferences.end();
+    Serial.println("OTA trigger cleared from persistent storage");
+}
+
+bool OTAManager::checkPendingOTA() {
+    preferences.begin("ota", true);  // Read-only
+    bool pending = preferences.getBool("pending", false);
+    String filename = preferences.getString("filename", "");
+    preferences.end();
+    
+    if (pending) {
+        Serial.println("╔═══════════════════════════════╗");
+        Serial.println("║  Pending OTA Update Detected  ║");
+        Serial.println("╚═══════════════════════════════╝");
+        Serial.print("Filename: ");
+        Serial.println(filename.length() > 0 ? filename : "(ArduinoOTA mode)");
+        
+        otaRequested = true;
+        otaFilename = filename;
+        return true;
+    }
+    return false;
+}
 
 void OTAManager::setup() {
     // Configure OTA settings
@@ -59,6 +96,7 @@ void OTAManager::setup() {
 void OTAManager::requestUpdate(const String& filename) {
     otaRequested = true;
     otaFilename = filename;
+    saveOTATrigger(filename);  // Persist for next boot
     Serial.print("OTA requested with filename: ");
     Serial.println(filename.length() > 0 ? filename : "(ArduinoOTA mode)");
 }
@@ -79,11 +117,13 @@ void OTAManager::handleUpdate() {
         Serial.println("Mode: HTTP Update from GitHub");
         if (performHTTPUpdate(otaFilename)) {
             Serial.println("HTTP update succeeded, device will reboot...");
+            clearOTATrigger();  // Clear before reboot
             delay(1000);
             ESP.restart();
         } else {
             Serial.println("HTTP update failed, continuing normal operation");
             otaRequested = false;
+            clearOTATrigger();  // Clear on failure
             return;
         }
     }
@@ -113,6 +153,7 @@ void OTAManager::handleUpdate() {
     
     Serial.println("\nOTA timeout reached. Resuming normal operation.");
     otaRequested = false;
+    clearOTATrigger();  // Clear persistent flag on timeout
 }
 
 void OTAManager::loop() {
@@ -186,3 +227,89 @@ bool OTAManager::performHTTPUpdate(const String& filename) {
     
     return false;
 }
+
+String OTAManager::checkLatestVersion() {
+    HTTPClient http;
+    String versionUrl = String(OTA_VERSION_URL);
+    
+    Serial.print("Checking for updates at: ");
+    Serial.println(versionUrl);
+    
+    http.begin(versionUrl);
+    http.setTimeout(5000);  // 5 second timeout
+    
+    int httpCode = http.GET();
+    String latestVersion = "";
+    
+    if (httpCode == HTTP_CODE_OK) {
+        latestVersion = http.getString();
+        latestVersion.trim();  // Remove whitespace
+        Serial.print("Latest version available: ");
+        Serial.println(latestVersion);
+    } else {
+        Serial.print("Failed to check version. HTTP code: ");
+        Serial.println(httpCode);
+    }
+    
+    http.end();
+    return latestVersion;
+}
+
+bool OTAManager::isNewerVersion(const String& latestVersion, const String& currentVersion) {
+    if (latestVersion.length() == 0 || currentVersion.length() == 0) {
+        return false;
+    }
+    
+    // Simple version comparison (assumes semantic versioning: X.Y.Z)
+    // Parse versions
+    int latestMajor = 0, latestMinor = 0, latestPatch = 0;
+    int currentMajor = 0, currentMinor = 0, currentPatch = 0;
+    
+    sscanf(latestVersion.c_str(), "%d.%d.%d", &latestMajor, &latestMinor, &latestPatch);
+    sscanf(currentVersion.c_str(), "%d.%d.%d", &currentMajor, &currentMinor, &currentPatch);
+    
+    // Compare versions
+    if (latestMajor > currentMajor) return true;
+    if (latestMajor == currentMajor && latestMinor > currentMinor) return true;
+    if (latestMajor == currentMajor && latestMinor == currentMinor && latestPatch > currentPatch) return true;
+    
+    return false;
+}
+
+bool OTAManager::checkForUpdates() {
+    Serial.println("\n╔═══════════════════════════════╗");
+    Serial.println("║  Checking for OTA Updates    ║");
+    Serial.println("╚═══════════════════════════════╝");
+    
+    String currentVersion = String(FIRMWARE_VERSION);
+    Serial.print("Current version: ");
+    Serial.println(currentVersion);
+    
+    String latestVersion = checkLatestVersion();
+    
+    if (latestVersion.length() == 0) {
+        Serial.println("Unable to check for updates");
+        return false;
+    }
+    
+    if (isNewerVersion(latestVersion, currentVersion)) {
+        Serial.println("\n✓ New version available!");
+        Serial.print("  Current: ");
+        Serial.println(currentVersion);
+        Serial.print("  Latest:  ");
+        Serial.println(latestVersion);
+        
+        // Construct firmware filename based on version
+        String firmwareFilename = "firmware-v" + latestVersion + ".bin";
+        
+        Serial.print("Triggering update to: ");
+        Serial.println(firmwareFilename);
+        
+        requestUpdate(firmwareFilename);
+        return true;
+    } else {
+        Serial.println("✓ Firmware is up to date");
+        return false;
+    }
+}
+

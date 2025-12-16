@@ -39,6 +39,10 @@ namespace Config {
   constexpr unsigned long STARTUP_DELAY_MS = 1000;
   constexpr unsigned long SERIAL_BAUD_RATE = 115200;
   
+  // OTA Configuration
+  constexpr bool AUTO_CHECK_OTA = true;  // Automatically check for updates on wake
+  constexpr char OTA_VERSION_URL[] = "https://raw.githubusercontent.com/bergmartin/batterymonitor/main/version.txt";  // URL to check latest version
+  
   // Deep Sleep Configuration
   constexpr bool ENABLE_DEEP_SLEEP = true;  // Enable power-saving deep sleep
   constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 14400000000ULL;  // 4 hours in microseconds
@@ -49,6 +53,13 @@ namespace Config {
   // #define WIFI_SSID "your-wifi-ssid"
   // #define WIFI_PASSWORD "your-wifi-password"
   constexpr unsigned long WIFI_TIMEOUT_MS = 20000;  // 20 seconds to connect
+  
+  // Static IP Configuration (set to false to use DHCP)
+  constexpr bool USE_STATIC_IP = false;
+  constexpr char STATIC_IP[] = "192.168.1.100";
+  constexpr char GATEWAY[] = "192.168.1.1";
+  constexpr char SUBNET[] = "255.255.255.0";
+  constexpr char DNS[] = "192.168.1.1";  // Primary DNS server
   
   // MQTT Configuration
   // IMPORTANT: Create mqtt_credentials.h with your MQTT broker details:

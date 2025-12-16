@@ -126,6 +126,49 @@ void setup()
                MQTT_USER, MQTT_PASSWORD,
                MQTT_CLIENT_ID);
 
+  // Check for pending OTA update from previous wake cycle
+  if (otaManager.checkPendingOTA())
+  {
+    Serial.println("OTA update was triggered while device was asleep.");
+    Serial.println("Processing OTA update now...");
+    
+    // Connect to WiFi for OTA
+    if (network.connectWiFi())
+    {
+      otaManager.setup();
+      otaManager.handleUpdate();
+      // If we reach here, OTA timed out or failed
+      // Continue with normal operation
+      network.disconnect();
+    }
+    else
+    {
+      Serial.println("Failed to connect to WiFi for OTA. Will retry next boot.");
+    }
+  }
+  // Automatically check for available updates on every wake
+  else if (Config::AUTO_CHECK_OTA)
+  {
+    // Connect to WiFi to check for updates
+    if (network.connectWiFi())
+    {
+      // Check if a newer version is available
+      if (otaManager.checkForUpdates())
+      {
+        // New version found and OTA requested
+        otaManager.setup();
+        otaManager.handleUpdate();
+        // If we reach here, OTA timed out or failed
+        // Continue with normal operation
+      }
+      network.disconnect();
+    }
+    else
+    {
+      Serial.println("Failed to connect to WiFi for update check.");
+    }
+  }
+
   // Initialize battery monitor
   monitor.begin();
 

@@ -20,6 +20,21 @@ bool NetworkManager::connectWiFi() {
     Serial.print("Connecting to WiFi: ");
     Serial.println(config.wifiSSID);
     
+    // Configure static IP if enabled
+    if (Config::USE_STATIC_IP) {
+        IPAddress staticIP, gateway, subnet, dns;
+        staticIP.fromString(Config::STATIC_IP);
+        gateway.fromString(Config::GATEWAY);
+        subnet.fromString(Config::SUBNET);
+        dns.fromString(Config::DNS);
+        
+        if (!WiFi.config(staticIP, gateway, subnet, dns)) {
+            Serial.println("Failed to configure static IP!");
+            return false;
+        }
+        Serial.println("Using static IP configuration");
+    }
+    
     WiFi.begin(config.wifiSSID.c_str(), config.wifiPassword.c_str());
     
     unsigned long startTime = millis();
