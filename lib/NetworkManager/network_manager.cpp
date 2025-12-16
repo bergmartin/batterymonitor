@@ -142,6 +142,11 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
     snprintf(value, sizeof(value), "%d", bootCount);
     mqttClient.publish(topic, value, true);
     
+    // Last updated timestamp (Unix timestamp)
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/last_updated/state", hostname);
+    snprintf(value, sizeof(value), "%lu", millis() / 1000);  // Seconds since boot
+    mqttClient.publish(topic, value, true);
+    
     // JSON state for RSSI (used by RSSI sensor value_template)
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/state/state", hostname);
     char json[300];
@@ -208,6 +213,13 @@ void NetworkManager::publishHomeAssistantDiscovery() {
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/boot_count/config", hostname);
     snprintf(payload, sizeof(payload),
         "{\"name\":\"Boot Count\",\"state_topic\":\"homeassistant/sensor/%s/boot_count/state\",\"icon\":\"mdi:restart\",\"state_class\":\"total_increasing\",\"unique_id\":\"%s_boot\",%s}",
+        hostname, hostname, deviceInfo);
+    mqttClient.publish(topic, payload, true);
+    
+    // Last updated sensor
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/last_updated/config", hostname);
+    snprintf(payload, sizeof(payload),
+        "{\"name\":\"Last Updated\",\"state_topic\":\"homeassistant/sensor/%s/last_updated/state\",\"icon\":\"mdi:clock-check\",\"unique_id\":\"%s_last_updated\",%s}",
         hostname, hostname, deviceInfo);
     mqttClient.publish(topic, payload, true);
     
