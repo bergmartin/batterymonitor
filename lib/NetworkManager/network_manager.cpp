@@ -65,21 +65,23 @@ bool NetworkManager::connectMQTT() {
     
     unsigned long startTime = millis();
     while (!mqttClient.connected() && millis() - startTime < Config::MQTT_TIMEOUT_MS) {
-        if (mqttClient.connect(config.mqttClientID.c_str(), config.mqttUser.c_str(), config.mqttPassword.c_str())) {
+        // Use clean_session=false to persist subscriptions across deep sleep
+        if (mqttClient.connect(config.mqttClientID.c_str(), config.mqttUser.c_str(), config.mqttPassword.c_str(), 
+                               nullptr, 0, false, nullptr, false)) {
             Serial.println(" Connected!");
             
-            // Subscribe to OTA trigger topic
+            // Subscribe to OTA trigger topic with QoS 1 for guaranteed delivery
             char otaTopic[100];
             snprintf(otaTopic, sizeof(otaTopic), "%s/ota", Config::MQTT_TOPIC_BASE);
-            mqttClient.subscribe(otaTopic);
-            Serial.print("Subscribed to OTA topic: ");
+            mqttClient.subscribe(otaTopic, 1);  // QoS 1
+            Serial.print("Subscribed to OTA topic (QoS 1): ");
             Serial.println(otaTopic);
             
             // Subscribe to reset topic
             char resetTopic[100];
             snprintf(resetTopic, sizeof(resetTopic), "%s/reset", Config::MQTT_TOPIC_BASE);
-            mqttClient.subscribe(resetTopic);
-            Serial.print("Subscribed to reset topic: ");
+            mqttClient.subscribe(resetTopic, 1);  // QoS 1
+            Serial.print("Subscribed to reset topic (QoS 1): ");
             Serial.println(resetTopic);
             
             mqttConnected = true;
@@ -188,6 +190,12 @@ void NetworkManager::mqttCallback(char* topic, byte* payload, unsigned int lengt
             if (otaCallback) {
                 otaCallback(message);
             }
+            
+            // Clear the retained message after processing to avoid re-triggering
+            char otaTopic[100];
+            snprintf(otaTopic, sizeof(otaTopic), "%s/ota", Config::MQTT_TOPIC_BASE);
+            mqttClient.publish(otaTopic, "", true);  // Clear retained message
+            Serial.println("Cleared retained OTA command");
         } else if (message.length() == 0 || message.equalsIgnoreCase("update") || message.equalsIgnoreCase("ota")) {
             // Empty message or generic trigger = use ArduinoOTA mode
             Serial.println("Mode: ArduinoOTA (no path provided)");
