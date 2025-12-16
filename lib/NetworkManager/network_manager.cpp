@@ -20,6 +20,9 @@ bool NetworkManager::connectWiFi() {
     Serial.print("Connecting to WiFi: ");
     Serial.println(config.wifiSSID);
     
+    // Set hostname before connecting
+    WiFi.setHostname(config.mqttClientID.c_str());
+    
     // Configure static IP if enabled
     if (Config::USE_STATIC_IP) {
         IPAddress staticIP, gateway, subnet, dns;
@@ -139,7 +142,7 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
     
     // Hostname
     snprintf(topic, sizeof(topic), "%s/hostname", Config::MQTT_TOPIC_BASE);
-    mqttClient.publish(topic, config.mqttClientID.c_str(), true);
+    mqttClient.publish(topic, WiFi.getHostname(), true);
     
     // Firmware version
     snprintf(topic, sizeof(topic), "%s/version", Config::MQTT_TOPIC_BASE);
@@ -155,7 +158,7 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
     snprintf(json, sizeof(json), 
         "{\"voltage\":%.2f,\"percentage\":%.1f,\"status\":\"%s\",\"type\":\"%s\",\"boot\":%d,\"rssi\":%d,\"hostname\":\"%s\",\"version\":\"%s\"}",
         reading.voltage, reading.percentage, statusStr, Config::BATTERY_TYPE_NAME, bootCount, WiFi.RSSI(), 
-        config.mqttClientID.c_str(), 
+        WiFi.getHostname(), 
         #ifdef FIRMWARE_VERSION
         FIRMWARE_VERSION
         #else
