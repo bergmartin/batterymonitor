@@ -121,6 +121,12 @@ public:
         Serial.println("\n╔═══════════════════════════════════════╗");
         Serial.println("║   Current Configuration              ║");
         Serial.println("╚═══════════════════════════════════════╝");
+        Serial.print("Firmware Version: ");
+        #ifdef FIRMWARE_VERSION
+        Serial.println(FIRMWARE_VERSION);
+        #else
+        Serial.println("(unknown)");
+        #endif
         Serial.print("WiFi SSID: ");
         Serial.println(wifiSSID);
         Serial.print("WiFi Password: ");

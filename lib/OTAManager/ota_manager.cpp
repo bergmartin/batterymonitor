@@ -182,7 +182,6 @@ bool OTAManager::performHTTPUpdate(const String& filename) {
     
     // Configure HTTPUpdate for GitHub redirects
     httpUpdate.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-    httpUpdate.setTimeout(30000);  // 30 second timeout for large firmware files
     httpUpdate.setLedPin(LED_BUILTIN, LOW);
     
     // Add callbacks for update progress
