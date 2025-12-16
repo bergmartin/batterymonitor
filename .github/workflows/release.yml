@@ -126,17 +126,13 @@ jobs:
           cp .pio/build/esp32dev-leadacid/firmware.bin firmware-leadacid-v${VERSION}.bin
           cp .pio/build/esp32dev-lifepo4/firmware.bin firmware-lifepo4-v${VERSION}.bin
           
-          # Create generic tagged names (backward compatibility)
-          cp .pio/build/esp32dev-leadacid/firmware.bin batterymonitor-leadacid-${TAG}.bin
-          cp .pio/build/esp32dev-lifepo4/firmware.bin batterymonitor-lifepo4-${TAG}.bin
-          
           # Create "latest" symlinks
-          cp .pio/build/esp32dev-leadacid/firmware.bin batterymonitor-leadacid.bin
-          cp .pio/build/esp32dev-lifepo4/firmware.bin batterymonitor-lifepo4.bin
+          cp .pio/build/esp32dev-leadacid/firmware.bin firmware-leadacid.bin
+          cp .pio/build/esp32dev-lifepo4/firmware.bin firmware-lifepo4.bin
       
       - name: Generate checksums
         run: |
-          sha256sum firmware-*.bin batterymonitor-*.bin > checksums.txt
+          sha256sum firmware-*.bin > checksums.txt
           cat checksums.txt
       
       - name: Create Release
@@ -146,10 +142,8 @@ jobs:
           files: |
             firmware-leadacid-v${{ steps.version.outputs.version }}.bin
             firmware-lifepo4-v${{ steps.version.outputs.version }}.bin
-            batterymonitor-leadacid-${{ github.ref_name }}.bin
-            batterymonitor-lifepo4-${{ github.ref_name }}.bin
-            batterymonitor-leadacid.bin
-            batterymonitor-lifepo4.bin
+            firmware-leadacid.bin
+            firmware-lifepo4.bin
             checksums.txt
           body: |
             ## Battery Monitor Firmware ${{ github.ref_name }}
@@ -165,10 +159,6 @@ jobs:
             **For Automatic OTA Updates (recommended):**
             - `firmware-leadacid-v${{ steps.version.outputs.version }}.bin` - Lead-Acid batteries
             - `firmware-lifepo4-v${{ steps.version.outputs.version }}.bin` - LiFePO4 batteries
-            
-            **Legacy/Manual names:**
-            - `batterymonitor-leadacid.bin` - Lead-Acid batteries
-            - `batterymonitor-lifepo4.bin` - LiFePO4 batteries
             
             ### Setup Auto-Update
             1. Update `version.txt` in the repository with new version number
