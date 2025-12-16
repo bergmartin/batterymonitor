@@ -275,8 +275,16 @@ bool OTAManager::checkForUpdates() {
         Serial.print("  Target:  ");
         Serial.println(targetVersion);
         
-        // Construct firmware filename based on version
-        String firmwareFilename = "firmware-v" + targetVersion + ".bin";
+        // Construct firmware filename based on version and battery type
+        #if BATTERY_TYPE == LEAD_ACID
+            String batteryType = "leadacid";
+        #elif BATTERY_TYPE == LIFEPO4
+            String batteryType = "lifepo4";
+        #else
+            String batteryType = "unknown";
+        #endif
+        
+        String firmwareFilename = "firmware-" + batteryType + "-v" + targetVersion + ".bin";
         
         Serial.print("Triggering update to: ");
         Serial.println(firmwareFilename);
