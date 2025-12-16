@@ -179,34 +179,47 @@ void NetworkManager::mqttCallback(char* topic, byte* payload, unsigned int lengt
     // Check if this is an OTA trigger
     String topicStr = String(topic);
     if (topicStr.endsWith("/ota")) {
+        // Security: Accept version paths or filenames, but not full URLs
+        message.trim();
+        
+        // Ignore empty messages (these are for clearing retained flag)
+        if (message.length() == 0) {
+            Serial.println("Received empty OTA message (retained flag clear)");
+            return;
+        }
+        
         Serial.println("OTA update requested!");
         
         // Clear the retained message FIRST to avoid re-triggering after reboot
         char otaTopic[100];
         snprintf(otaTopic, sizeof(otaTopic), "%s/ota", Config::MQTT_TOPIC_BASE);
+        
+        Serial.println("Clearing retained OTA message from broker...");
         mqttClient.publish(otaTopic, "", true);  // Clear retained message
         
         // Process outgoing publish and wait for it to complete
-        for (int i = 0; i < 10; i++) {
+        // Need longer delay to ensure broker receives and processes the clear
+        for (int i = 0; i < 20; i++) {
             mqttClient.loop();
-            delay(100);
+            delay(50);
         }
-        Serial.println("Cleared retained OTA command");
+        Serial.println("Retained OTA command cleared");
         
-        // Security: Accept version paths or filenames, but not full URLs
-        message.trim();
-        if (message.indexOf('\\') == -1 && message.indexOf(':') == -1 && message.length() > 0) {
-            // Valid: "v1.0.2/firmware-leadacid.bin" or "firmware.bin"
-            Serial.print("OTA Path/Filename: ");
-            Serial.println(message);
-            if (otaCallback) {
-                otaCallback(message);
-            }
-        } else if (message.length() == 0 || message.equalsIgnoreCase("update") || message.equalsIgnoreCase("ota")) {
-            // Empty message or generic trigger = use ArduinoOTA mode
-            Serial.println("Mode: ArduinoOTA (no path provided)");
-            if (otaCallback) {
-                otaCallback("");
+        if (message.indexOf('\\') == -1 && message.indexOf(':') == -1) {
+            // Valid: "v1.0.2/firmware-leadacid.bin" or "firmware.bin" or "update"/"ota"
+            if (message.equalsIgnoreCase("update") || message.equalsIgnoreCase("ota")) {
+                // Generic trigger = use ArduinoOTA mode
+                Serial.println("Mode: ArduinoOTA (network upload)");
+                if (otaCallback) {
+                    otaCallback("");
+                }
+            } else {
+                // Specific firmware path/filename
+                Serial.print("OTA Path/Filename: ");
+                Serial.println(message);
+                if (otaCallback) {
+                    otaCallback(message);
+                }
             }
         } else {
             Serial.println("ERROR: Invalid path/filename. Must not contain backslashes or colons.");
