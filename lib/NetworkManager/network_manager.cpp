@@ -181,6 +181,18 @@ void NetworkManager::mqttCallback(char* topic, byte* payload, unsigned int lengt
     if (topicStr.endsWith("/ota")) {
         Serial.println("OTA update requested!");
         
+        // Clear the retained message FIRST to avoid re-triggering after reboot
+        char otaTopic[100];
+        snprintf(otaTopic, sizeof(otaTopic), "%s/ota", Config::MQTT_TOPIC_BASE);
+        mqttClient.publish(otaTopic, "", true);  // Clear retained message
+        
+        // Process outgoing publish and wait for it to complete
+        for (int i = 0; i < 10; i++) {
+            mqttClient.loop();
+            delay(100);
+        }
+        Serial.println("Cleared retained OTA command");
+        
         // Security: Accept version paths or filenames, but not full URLs
         message.trim();
         if (message.indexOf('\\') == -1 && message.indexOf(':') == -1 && message.length() > 0) {
@@ -190,12 +202,6 @@ void NetworkManager::mqttCallback(char* topic, byte* payload, unsigned int lengt
             if (otaCallback) {
                 otaCallback(message);
             }
-            
-            // Clear the retained message after processing to avoid re-triggering
-            char otaTopic[100];
-            snprintf(otaTopic, sizeof(otaTopic), "%s/ota", Config::MQTT_TOPIC_BASE);
-            mqttClient.publish(otaTopic, "", true);  // Clear retained message
-            Serial.println("Cleared retained OTA command");
         } else if (message.length() == 0 || message.equalsIgnoreCase("update") || message.equalsIgnoreCase("ota")) {
             // Empty message or generic trigger = use ArduinoOTA mode
             Serial.println("Mode: ArduinoOTA (no path provided)");
