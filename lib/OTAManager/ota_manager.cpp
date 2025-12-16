@@ -255,7 +255,7 @@ bool OTAManager::isNewerVersion(const String& latestVersion, const String& curre
 
 bool OTAManager::checkForUpdates() {
     Serial.println("\n╔═══════════════════════════════╗");
-    Serial.println("║  Checking for OTA Updates    ║");
+    Serial.println("║  Checking for OTA Updates     ║");
     Serial.println("╚═══════════════════════════════╝");
     
     String currentVersion = String(FIRMWARE_VERSION);

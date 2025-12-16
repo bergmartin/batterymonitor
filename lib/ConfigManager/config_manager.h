@@ -119,7 +119,7 @@ public:
     
     void printConfig() {
         Serial.println("\n╔═══════════════════════════════════════╗");
-        Serial.println("║   Current Configuration              ║");
+        Serial.println("║   Current Configuration               ║");
         Serial.println("╚═══════════════════════════════════════╝");
         Serial.print("Firmware Version: ");
         #ifdef FIRMWARE_VERSION
