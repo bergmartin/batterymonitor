@@ -119,14 +119,7 @@ jobs:
       
       - name: Rename firmware files
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          TAG=${{ steps.version.outputs.tag }}
-          
-          # Create versioned filenames (for OTA auto-update)
-          cp .pio/build/esp32dev-leadacid/firmware.bin firmware-leadacid-v${VERSION}.bin
-          cp .pio/build/esp32dev-lifepo4/firmware.bin firmware-lifepo4-v${VERSION}.bin
-          
-          # Create "latest" symlinks
+          # Simple filenames without version - version is in the release URL path
           cp .pio/build/esp32dev-leadacid/firmware.bin firmware-leadacid.bin
           cp .pio/build/esp32dev-lifepo4/firmware.bin firmware-lifepo4.bin
       
@@ -140,8 +133,6 @@ jobs:
         with:
           token: ${{ github.token }}
           files: |
-            firmware-leadacid-v${{ steps.version.outputs.version }}.bin
-            firmware-lifepo4-v${{ steps.version.outputs.version }}.bin
             firmware-leadacid.bin
             firmware-lifepo4.bin
             checksums.txt
@@ -156,23 +147,26 @@ jobs:
             
             ### Firmware Files
             
-            **For Automatic OTA Updates (recommended):**
-            - `firmware-leadacid-v${{ steps.version.outputs.version }}.bin` - Lead-Acid batteries
-            - `firmware-lifepo4-v${{ steps.version.outputs.version }}.bin` - LiFePO4 batteries
+            **Simple filenames (version in URL path):**
+            - `firmware-leadacid.bin` - Lead-Acid batteries
+            - `firmware-lifepo4.bin` - LiFePO4 batteries
+            
+            **Download URL structure:**
+            - `https://github.com/USERNAME/REPO/releases/download/${{ github.ref_name }}/firmware-leadacid.bin`
             
             ### Setup Auto-Update
-            1. Update `version.txt` in the repository with new version number
-            2. Tag and release with matching version: `git tag v${{ steps.version.outputs.version }}`
+            1. Set target version via serial: `otaver ${{ steps.version.outputs.version }}`
+            2. Save configuration: `save`
             3. Device automatically detects and installs on next wake
             
             ### Manual OTA Update via MQTT
             Force an immediate update by publishing to MQTT:
             ```bash
             # For Lead-Acid battery
-            mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" -m "firmware-leadacid-v${{ steps.version.outputs.version }}.bin"
+            mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" -m "${{ github.ref_name }}/firmware-leadacid.bin"
             
             # For LiFePO4 battery
-            mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" -m "firmware-lifepo4-v${{ steps.version.outputs.version }}.bin"
+            mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" -m "${{ github.ref_name }}/firmware-lifepo4.bin"
             ```
             
             ### First Time Setup (USB)
@@ -190,12 +184,13 @@ jobs:
             
             ### Configuration
             - **Enable/disable auto-updates**: Set `AUTO_CHECK_OTA` in `battery_config.h`
-            - **Version check URL**: Set `OTA_VERSION_URL` to point to your `version.txt`
+            - **Set target version**: Use `otaver` command via serial
             - **Update server**: Set `OTA_BASE_URL` for your release downloads
             
             ### How It Works
-            - Device checks `version.txt` on GitHub on every wake
-            - Compares with built-in `FIRMWARE_VERSION`
+            - Set target version using `otaver` command via serial
+            - Device compares with built-in `FIRMWARE_VERSION` on wake
+            - Constructs URL: `BASE_URL/v{target}/firmware-{type}.bin`
             - Downloads and installs if newer version available
             - Credentials persist in NVS across all updates ✓
             
