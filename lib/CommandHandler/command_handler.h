@@ -2,6 +2,7 @@
 #define COMMAND_HANDLER_H
 
 #include <Arduino.h>
+#include <Preferences.h>
 #include "config_manager.h"
 
 class CommandHandler {
@@ -15,6 +16,7 @@ private:
     void handleSleep();
     void handleReboot();
     void handleOTAVersion(const String& version);
+    void handleClearOTA();
     void showHelp();
     
 public:

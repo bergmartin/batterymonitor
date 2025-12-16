@@ -43,6 +43,9 @@ void CommandHandler::checkCommands() {
         else if (cmd == "otaver") {
             handleOTAVersion(arg);
         }
+        else if (cmd == "clearota" || cmd == "otaclear") {
+            handleClearOTA();
+        }
         else if (cmd == "help") {
             showHelp();
         }
@@ -184,6 +187,21 @@ void CommandHandler::handleOTAVersion(const String& version) {
     }
 }
 
+void CommandHandler::handleClearOTA() {
+    Serial.println("\n╔═══════════════════════════════╗");
+    Serial.println("║   Clearing OTA Trigger        ║");
+    Serial.println("╚═══════════════════════════════╝");
+    
+    Preferences preferences;
+    preferences.begin("ota", false);
+    preferences.putBool("pending", false);
+    preferences.putString("filename", "");
+    preferences.end();
+    
+    Serial.println("✓ Pending OTA trigger cleared");
+    Serial.println("Device will no longer attempt OTA on next boot");
+}
+
 void CommandHandler::showHelp() {
     Serial.println("\n╔═══════════════════════════════════════════════════════╗");
     Serial.println("║   Battery Monitor - Serial Commands                   ║");
@@ -207,6 +225,7 @@ void CommandHandler::showHelp() {
     Serial.println("  nosleep           - Disable deep sleep (stay awake)");
     Serial.println("  sleep             - Enable deep sleep");
     Serial.println("  otaver <version>  - Set target OTA version (shortcut)");
+    Serial.println("  clearota          - Clear pending OTA trigger");
     Serial.println("  reboot            - Restart the device");
     Serial.println("  help              - Show this help message");
     Serial.println("\nExamples:");

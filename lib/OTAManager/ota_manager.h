@@ -27,7 +27,6 @@ private:
     
     bool performHTTPUpdate(const String& filename);
     void saveOTATrigger(const String& filename);
-    void clearOTATrigger();
     bool isNewerVersion(const String& latestVersion, const String& currentVersion);
     
 public:
@@ -35,6 +34,7 @@ public:
     
     void setup();
     void requestUpdate(const String& filename);
+    void clearOTATrigger();  // Public method to clear pending OTA trigger
     bool isUpdateRequested() const;
     bool checkPendingOTA();  // Check if OTA was triggered while asleep
     bool checkForUpdates();  // Automatically check if newer version is available
