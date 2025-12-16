@@ -109,7 +109,6 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
     }
     
     char topic[150];
-    char value[20];
     const char* hostname = WiFi.getHostname();
     
     // Status as text
@@ -122,37 +121,12 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
         case BatteryStatus::DEAD: statusStr = "DEAD"; break;
     }
     
-    // Publish to Home Assistant state topics
-    // Voltage
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/voltage/state", hostname);
-    snprintf(value, sizeof(value), "%.2f", reading.voltage);
-    mqttClient.publish(topic, value, true);
-    
-    // Battery percentage
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/percentage/state", hostname);
-    snprintf(value, sizeof(value), "%.1f", reading.percentage);
-    mqttClient.publish(topic, value, true);
-    
-    // Status
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/status/state", hostname);
-    mqttClient.publish(topic, statusStr, true);
-    
-    // Boot count
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/boot_count/state", hostname);
-    snprintf(value, sizeof(value), "%d", bootCount);
-    mqttClient.publish(topic, value, true);
-    
-    // Last updated timestamp (Unix timestamp)
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/last_updated/state", hostname);
-    snprintf(value, sizeof(value), "%lu", millis() / 1000);  // Seconds since boot
-    mqttClient.publish(topic, value, true);
-    
-    // JSON state for RSSI (used by RSSI sensor value_template)
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/state/state", hostname);
-    char json[300];
+    // Publish single JSON state topic for all sensors (device-based approach)
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/state", hostname);
+    char json[400];
     snprintf(json, sizeof(json), 
-        "{\"voltage\":%.2f,\"percentage\":%.1f,\"status\":\"%s\",\"type\":\"%s\",\"boot\":%d,\"rssi\":%d}",
-        reading.voltage, reading.percentage, statusStr, Config::BATTERY_TYPE_NAME, bootCount, WiFi.RSSI());
+        "{\"voltage\":%.2f,\"percentage\":%.1f,\"status\":\"%s\",\"type\":\"%s\",\"boot\":%d,\"rssi\":%d,\"last_updated\":%lu}",
+        reading.voltage, reading.percentage, statusStr, Config::BATTERY_TYPE_NAME, bootCount, WiFi.RSSI(), millis() / 1000);
     mqttClient.publish(topic, json, true);
     
     Serial.println("Published to Home Assistant MQTT:");
@@ -184,7 +158,7 @@ void NetworkManager::publishHomeAssistantDiscovery() {
     // Voltage sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/voltage/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Battery Voltage\",\"state_topic\":\"homeassistant/sensor/%s/voltage/state\",\"unit_of_measurement\":\"V\",\"device_class\":\"voltage\",\"state_class\":\"measurement\",\"unique_id\":\"%s_voltage\",%s}",
+        "{\"name\":\"Battery Voltage\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"unit_of_measurement\":\"V\",\"device_class\":\"voltage\",\"state_class\":\"measurement\",\"value_template\":\"{{ value_json.voltage }}\",\"unique_id\":\"%s_voltage\",%s}",
         hostname, hostname, deviceInfo);
     Serial.println("\n[Voltage Sensor]");
     Serial.print("Topic: ");
@@ -196,7 +170,7 @@ void NetworkManager::publishHomeAssistantDiscovery() {
     // Battery percentage sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/percentage/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Battery Level\",\"state_topic\":\"homeassistant/sensor/%s/percentage/state\",\"unit_of_measurement\":\"%%\",\"device_class\":\"battery\",\"state_class\":\"measurement\",\"unique_id\":\"%s_percentage\",%s}",
+        "{\"name\":\"Battery Level\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"unit_of_measurement\":\"%%\",\"device_class\":\"battery\",\"state_class\":\"measurement\",\"value_template\":\"{{ value_json.percentage }}\",\"unique_id\":\"%s_percentage\",%s}",
         hostname, hostname, deviceInfo);
     Serial.println("\n[Battery Level Sensor]");
     Serial.print("Topic: ");
@@ -208,7 +182,7 @@ void NetworkManager::publishHomeAssistantDiscovery() {
     // Status sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/status/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Battery Status\",\"state_topic\":\"homeassistant/sensor/%s/status/state\",\"icon\":\"mdi:battery-check\",\"unique_id\":\"%s_status\",%s}",
+        "{\"name\":\"Battery Status\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"icon\":\"mdi:battery-check\",\"value_template\":\"{{ value_json.status }}\",\"unique_id\":\"%s_status\",%s}",
         hostname, hostname, deviceInfo);
     Serial.println("\n[Battery Status Sensor]");
     Serial.print("Topic: ");
@@ -220,7 +194,7 @@ void NetworkManager::publishHomeAssistantDiscovery() {
     // RSSI sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/rssi/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"WiFi Signal\",\"state_topic\":\"homeassistant/sensor/%s/state/state\",\"unit_of_measurement\":\"dBm\",\"device_class\":\"signal_strength\",\"state_class\":\"measurement\",\"value_template\":\"{{ value_json.rssi }}\",\"unique_id\":\"%s_rssi\",%s}",
+        "{\"name\":\"WiFi Signal\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"unit_of_measurement\":\"dBm\",\"device_class\":\"signal_strength\",\"state_class\":\"measurement\",\"value_template\":\"{{ value_json.rssi }}\",\"unique_id\":\"%s_rssi\",%s}",
         hostname, hostname, deviceInfo);
     Serial.println("\n[WiFi Signal Sensor]");
     Serial.print("Topic: ");
@@ -232,7 +206,7 @@ void NetworkManager::publishHomeAssistantDiscovery() {
     // Boot count sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/boot_count/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Boot Count\",\"state_topic\":\"homeassistant/sensor/%s/boot_count/state\",\"icon\":\"mdi:restart\",\"state_class\":\"total_increasing\",\"unique_id\":\"%s_boot\",%s}",
+        "{\"name\":\"Boot Count\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"icon\":\"mdi:restart\",\"state_class\":\"total_increasing\",\"value_template\":\"{{ value_json.boot }}\",\"unique_id\":\"%s_boot\",%s}",
         hostname, hostname, deviceInfo);
     Serial.println("\n[Boot Count Sensor]");
     Serial.print("Topic: ");
@@ -244,7 +218,7 @@ void NetworkManager::publishHomeAssistantDiscovery() {
     // Last updated sensor
     snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/last_updated/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Last Updated\",\"state_topic\":\"homeassistant/sensor/%s/last_updated/state\",\"icon\":\"mdi:clock-check\",\"unique_id\":\"%s_last_updated\",%s}",
+        "{\"name\":\"Last Updated\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"icon\":\"mdi:clock-check\",\"value_template\":\"{{ value_json.last_updated }}\",\"unique_id\":\"%s_last_updated\",%s}",
         hostname, hostname, deviceInfo);
     Serial.println("\n[Last Updated Sensor]");
     Serial.print("Topic: ");
