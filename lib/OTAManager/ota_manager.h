@@ -6,6 +6,7 @@
 #include <HTTPUpdate.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <Preferences.h>
 #include "config_manager.h"
 

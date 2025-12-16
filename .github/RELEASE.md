@@ -61,7 +61,7 @@ The workflow creates both versioned and generic filenames. This allows you to:
 ### Option 2: Use "latest" for automatic updates (Recommended)
 ```ini
 ; In platformio.ini
--D OTA_BASE_URL='"https://github.com/USER/REPO/releases/latest/download/"'
+-D OTA_BASE_URL='"https://github.com/USER/REPO/releases/download/"'
 ```
 
 Then trigger with:

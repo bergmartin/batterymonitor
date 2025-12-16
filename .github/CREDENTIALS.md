@@ -102,7 +102,7 @@ EOF
 #### C. Use the Release
 ```bash
 # 1. Download firmware from GitHub release
-wget https://github.com/USER/REPO/releases/latest/download/batterymonitor-leadacid.bin
+wget https://github.com/USER/REPO/releases/download/v1.0.0/firmware-leadacid.bin
 
 # 2. Upload directly - no credential configuration needed!
 pio run -e esp32dev-leadacid -t upload

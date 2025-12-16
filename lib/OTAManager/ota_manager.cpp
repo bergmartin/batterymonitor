@@ -177,7 +177,8 @@ bool OTAManager::performHTTPUpdate(const String& filename) {
     Serial.println(fullUrl);
     Serial.println();
     
-    WiFiClient client;
+    WiFiClientSecure client;
+    client.setInsecure();  // Skip certificate verification (GitHub certs change frequently)
     httpUpdate.setLedPin(LED_BUILTIN, LOW);
     
     // Add callbacks for update progress
@@ -275,7 +276,7 @@ bool OTAManager::checkForUpdates() {
         Serial.print("  Target:  ");
         Serial.println(targetVersion);
         
-        // Construct firmware filename based on version and battery type
+        // Construct firmware filename based on battery type (version in URL path)
         #if BATTERY_TYPE == LEAD_ACID
             String batteryType = "leadacid";
         #elif BATTERY_TYPE == LIFEPO4
@@ -284,7 +285,7 @@ bool OTAManager::checkForUpdates() {
             String batteryType = "unknown";
         #endif
         
-        String firmwareFilename = "firmware-" + batteryType + "-v" + targetVersion + ".bin";
+        String firmwareFilename = "v" + targetVersion + "/firmware-" + batteryType + ".bin";
         
         Serial.print("Triggering update to: ");
         Serial.println(firmwareFilename);

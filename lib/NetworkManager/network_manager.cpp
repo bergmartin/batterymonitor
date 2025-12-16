@@ -179,23 +179,23 @@ void NetworkManager::mqttCallback(char* topic, byte* payload, unsigned int lengt
     if (topicStr.endsWith("/ota")) {
         Serial.println("OTA update requested!");
         
-        // Security: Only accept filenames, not full URLs or paths
+        // Security: Accept version paths or filenames, but not full URLs
         message.trim();
-        if (message.indexOf('/') == -1 && message.indexOf('\\') == -1 && 
-            message.indexOf(':') == -1 && message.length() > 0) {
-            Serial.print("OTA Filename: ");
+        if (message.indexOf('\\') == -1 && message.indexOf(':') == -1 && message.length() > 0) {
+            // Valid: "v1.0.2/firmware-leadacid.bin" or "firmware.bin"
+            Serial.print("OTA Path/Filename: ");
             Serial.println(message);
             if (otaCallback) {
                 otaCallback(message);
             }
         } else if (message.length() == 0 || message.equalsIgnoreCase("update") || message.equalsIgnoreCase("ota")) {
             // Empty message or generic trigger = use ArduinoOTA mode
-            Serial.println("Mode: ArduinoOTA (no filename provided)");
+            Serial.println("Mode: ArduinoOTA (no path provided)");
             if (otaCallback) {
                 otaCallback("");
             }
         } else {
-            Serial.println("ERROR: Invalid filename. Must be filename only, no paths or URLs.");
+            Serial.println("ERROR: Invalid path/filename. Must not contain backslashes or colons.");
         }
     }
     
