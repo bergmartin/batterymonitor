@@ -115,15 +115,19 @@ void OTAManager::handleUpdate() {
     // Check if filename is provided for HTTP update
     if (otaFilename.length() > 0) {
         Serial.println("Mode: HTTP Update from GitHub");
+        
+        // Clear the persistent trigger BEFORE attempting update
+        // This prevents re-triggering if update succeeds and device reboots
+        clearOTATrigger();
+        Serial.println("Cleared OTA trigger before update attempt");
+        
         if (performHTTPUpdate(otaFilename)) {
             Serial.println("HTTP update succeeded, device will reboot...");
-            clearOTATrigger();  // Clear before reboot
             delay(1000);
             ESP.restart();
         } else {
             Serial.println("HTTP update failed, continuing normal operation");
             otaRequested = false;
-            clearOTATrigger();  // Clear on failure
             return;
         }
     }
@@ -133,6 +137,10 @@ void OTAManager::handleUpdate() {
     Serial.println("Waiting for OTA update...");
     Serial.println("Use PlatformIO or Arduino IDE to upload");
     Serial.println("Hostname: " + config.mqttClientID);
+    
+    // Clear the persistent trigger for ArduinoOTA mode too
+    clearOTATrigger();
+    Serial.println("Cleared OTA trigger before ArduinoOTA mode");
     
     // Wait for OTA update with timeout
     const unsigned long otaTimeout = 60000;  // 1 minute
@@ -153,7 +161,7 @@ void OTAManager::handleUpdate() {
     
     Serial.println("\nOTA timeout reached. Resuming normal operation.");
     otaRequested = false;
-    clearOTATrigger();  // Clear persistent flag on timeout
+    // No need to clear again - already cleared at start of ArduinoOTA mode
 }
 
 void OTAManager::loop() {
