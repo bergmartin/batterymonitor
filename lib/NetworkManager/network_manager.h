@@ -20,6 +20,7 @@ private:
     std::function<void()> resetCallback;
     
     void mqttCallback(char* topic, byte* payload, unsigned int length);
+    void publishHomeAssistantDiscovery();
     
 public:
     bool wifiConnected;
