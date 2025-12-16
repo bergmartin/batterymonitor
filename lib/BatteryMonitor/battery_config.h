@@ -40,7 +40,7 @@ namespace Config {
   constexpr unsigned long SERIAL_BAUD_RATE = 115200;
   
   // OTA Configuration
-  constexpr bool AUTO_CHECK_OTA = true;  // Automatically check for updates on wake
+  constexpr bool AUTO_CHECK_OTA = false;  // Automatically check for updates on wake (disabled by default)
   // Note: Target OTA version is now stored in ConfigManager (use 'otaver' command to set)
   
   // Deep Sleep Configuration
