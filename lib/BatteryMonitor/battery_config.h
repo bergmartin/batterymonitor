@@ -45,7 +45,7 @@ namespace Config {
   
   // Deep Sleep Configuration
   constexpr bool ENABLE_DEEP_SLEEP = true;  // Enable power-saving deep sleep
-  constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 14400000000ULL;  // 4 hours in microseconds
+  constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 120000000ULL;  // 2 minutes in microseconds
   constexpr int AWAKE_TIME_MS = 5000;  // Time to stay awake for reading and display
   
   // WiFi Configuration
