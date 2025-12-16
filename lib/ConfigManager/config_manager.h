@@ -124,7 +124,7 @@ public:
         Serial.print("WiFi SSID: ");
         Serial.println(wifiSSID);
         Serial.print("WiFi Password: ");
-        Serial.println(wifiPassword.length() > 0 ? "********" : "(empty)");
+        Serial.println(wifiPassword);
         Serial.print("MQTT Server: ");
         Serial.println(mqttServer);
         Serial.print("MQTT Port: ");
@@ -132,7 +132,7 @@ public:
         Serial.print("MQTT User: ");
         Serial.println(mqttUser);
         Serial.print("MQTT Password: ");
-        Serial.println(mqttPassword.length() > 0 ? "********" : "(empty)");
+        Serial.println(mqttPassword);
         Serial.print("MQTT Client ID: ");
         Serial.println(mqttClientID);
         Serial.print("Deep Sleep: ");
