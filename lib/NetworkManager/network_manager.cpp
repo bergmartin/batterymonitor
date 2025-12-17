@@ -1,4 +1,5 @@
 #include "network_manager.h"
+#include <time.h>
 
 NetworkManager::NetworkManager(WiFiClient& wifi, PubSubClient& mqtt, ConfigManager& cfg)
     : wifiClient(wifi), mqttClient(mqtt), config(cfg), 
@@ -50,6 +51,11 @@ bool NetworkManager::connectWiFi() {
         Serial.println(" Connected!");
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
+        
+        // Configure NTP time sync
+        configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+        Serial.println("NTP time sync started");
+        
         wifiConnected = true;
         return true;
     } else {
@@ -65,6 +71,10 @@ bool NetworkManager::connectMQTT() {
     Serial.print("Connecting to MQTT broker: ");
     Serial.println(config.mqttServer);
     mqttClient.setServer(config.mqttServer.c_str(), config.mqttPort);
+    
+    // Increase buffer size for discovery messages (default 256 may be too small)
+    mqttClient.setBufferSize(1024);
+    Serial.printf("MQTT buffer size: %d bytes\n", mqttClient.getBufferSize());
     
     unsigned long startTime = millis();
     while (!mqttClient.connected() && millis() - startTime < Config::MQTT_TIMEOUT_MS) {
@@ -121,19 +131,70 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
         case BatteryStatus::DEAD: statusStr = "DEAD"; break;
     }
     
-    // Publish single JSON state topic for all sensors (device-based approach)
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/state", hostname);
-    char json[400];
-    snprintf(json, sizeof(json), 
-        "{\"voltage\":%.2f,\"percentage\":%.1f,\"status\":\"%s\",\"type\":\"%s\",\"boot\":%d,\"rssi\":%d,\"last_updated\":%lu}",
-        reading.voltage, reading.percentage, statusStr, Config::BATTERY_TYPE_NAME, bootCount, WiFi.RSSI(), millis() / 1000);
-    mqttClient.publish(topic, json, true);
+    // Publish each sensor to its own state topic
+    char value[20];
     
-    Serial.println("Published to Home Assistant MQTT:");
-    Serial.print("  Device: ");
-    Serial.println(hostname);
-    Serial.print("  JSON: ");
-    Serial.println(json);
+    // Voltage
+    snprintf(topic, sizeof(topic), "%s_voltage/state", hostname);
+    snprintf(value, sizeof(value), "%.2f", reading.voltage);
+    if (!mqttClient.publish(topic, value, true)) {
+        Serial.printf("❌ Failed to publish voltage - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+    } 
+    
+    // Percentage
+    snprintf(topic, sizeof(topic), "%s_percentage/state", hostname);
+    snprintf(value, sizeof(value), "%.1f", reading.percentage);
+    if (!mqttClient.publish(topic, value, true)) {
+        Serial.printf("❌ Failed to publish percentage - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+    }
+    
+    // Status
+    snprintf(topic, sizeof(topic), "%s_status/state", hostname);
+    if (!mqttClient.publish(topic, statusStr, true)) {
+        Serial.printf("❌ Failed to publish status - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+    } 
+    
+    // RSSI
+    snprintf(topic, sizeof(topic), "%s_rssi/state", hostname);
+    snprintf(value, sizeof(value), "%d", WiFi.RSSI());
+    if (!mqttClient.publish(topic, value, true)) {
+        Serial.printf("❌ Failed to publish RSSI - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+    } 
+    
+    // Boot count
+    snprintf(topic, sizeof(topic), "%s_boot/state", hostname);
+    snprintf(value, sizeof(value), "%d", bootCount);
+    if (!mqttClient.publish(topic, value, true)) {
+        Serial.printf("❌ Failed to publish boot count - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+    }
+    
+    // Last updated (ISO 8601 timestamp)
+    snprintf(topic, sizeof(topic), "%s_last_updated/state", hostname);
+    time_t now;
+    struct tm timeinfo;
+    time(&now);
+    if (getLocalTime(&timeinfo)) {
+        char timestamp[30];
+        strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%S", &timeinfo);
+        if (!mqttClient.publish(topic, timestamp, true)) {
+            Serial.printf("❌ Failed to publish last updated time - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+        }
+    } else {
+        // Fallback if NTP not synced yet
+        snprintf(value, sizeof(value), "%lu", millis() / 1000);
+        if (!mqttClient.publish(topic, value, true)) {
+            Serial.printf("❌ Failed to publish last updated time (no NTP) - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+        }
+    }
+    
+    Serial.printf("Published sensor states for device: %s\n", hostname);
 }
 
 void NetworkManager::publishHomeAssistantDiscovery() {
@@ -156,76 +217,58 @@ void NetworkManager::publishHomeAssistantDiscovery() {
     );
     
     // Voltage sensor
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/voltage/config", hostname);
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s_voltage/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Battery Voltage\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"unit_of_measurement\":\"V\",\"device_class\":\"voltage\",\"state_class\":\"measurement\",\"value_template\":\"{{ value_json.voltage }}\",\"unique_id\":\"%s_voltage\",%s}",
+        "{\"name\":\"Battery Voltage\",\"state_topic\":\"%s_voltage/state\",\"unit_of_measurement\":\"V\",\"device_class\":\"voltage\",\"state_class\":\"measurement\",\"unique_id\":\"%s_voltage\",%s}",
         hostname, hostname, deviceInfo);
-    Serial.println("\n[Voltage Sensor]");
-    Serial.print("Topic: ");
-    Serial.println(topic);
-    Serial.print("Config: ");
-    Serial.println(payload);
-    mqttClient.publish(topic, payload, true);
+    if (!mqttClient.publish(topic, payload, true)) {
+        Serial.println("Failed to publish voltage sensor config");
+    } 
     
     // Battery percentage sensor
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/percentage/config", hostname);
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s_percentage/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Battery Level\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"unit_of_measurement\":\"%%\",\"device_class\":\"battery\",\"state_class\":\"measurement\",\"value_template\":\"{{ value_json.percentage }}\",\"unique_id\":\"%s_percentage\",%s}",
+        "{\"name\":\"Battery Level\",\"state_topic\":\"%s_percentage/state\",\"unit_of_measurement\":\"%%\",\"device_class\":\"battery\",\"state_class\":\"measurement\",\"unique_id\":\"%s_percentage\",%s}",
         hostname, hostname, deviceInfo);
-    Serial.println("\n[Battery Level Sensor]");
-    Serial.print("Topic: ");
-    Serial.println(topic);
-    Serial.print("Config: ");
-    Serial.println(payload);
-    mqttClient.publish(topic, payload, true);
+    if (!mqttClient.publish(topic, payload, true)) {
+        Serial.println("Failed to publish percentage sensor config");
+    }
     
     // Status sensor
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/status/config", hostname);
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s_status/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Battery Status\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"icon\":\"mdi:battery-check\",\"value_template\":\"{{ value_json.status }}\",\"unique_id\":\"%s_status\",%s}",
+        "{\"name\":\"Battery Status\",\"state_topic\":\"%s_status/state\",\"icon\":\"mdi:battery-check\",\"unique_id\":\"%s_status\",%s}",
         hostname, hostname, deviceInfo);
-    Serial.println("\n[Battery Status Sensor]");
-    Serial.print("Topic: ");
-    Serial.println(topic);
-    Serial.print("Config: ");
-    Serial.println(payload);
-    mqttClient.publish(topic, payload, true);
+    if (!mqttClient.publish(topic, payload, true)) {
+        Serial.println("Failed to publish status sensor config");
+    }
     
     // RSSI sensor
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/rssi/config", hostname);
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s_rssi/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"WiFi Signal\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"unit_of_measurement\":\"dBm\",\"device_class\":\"signal_strength\",\"state_class\":\"measurement\",\"value_template\":\"{{ value_json.rssi }}\",\"unique_id\":\"%s_rssi\",%s}",
+        "{\"name\":\"WiFi Signal\",\"state_topic\":\"%s_rssi/state\",\"unit_of_measurement\":\"dBm\",\"device_class\":\"signal_strength\",\"state_class\":\"measurement\",\"unique_id\":\"%s_rssi\",%s}",
         hostname, hostname, deviceInfo);
-    Serial.println("\n[WiFi Signal Sensor]");
-    Serial.print("Topic: ");
-    Serial.println(topic);
-    Serial.print("Config: ");
-    Serial.println(payload);
-    mqttClient.publish(topic, payload, true);
+    if (!mqttClient.publish(topic, payload, true)) {
+        Serial.println("Failed to publish RSSI sensor config");
+    }
     
     // Boot count sensor
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/boot_count/config", hostname);
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s_boot/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Boot Count\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"icon\":\"mdi:restart\",\"state_class\":\"total_increasing\",\"value_template\":\"{{ value_json.boot }}\",\"unique_id\":\"%s_boot\",%s}",
+        "{\"name\":\"Boot Count\",\"state_topic\":\"%s_boot/state\",\"icon\":\"mdi:restart\",\"state_class\":\"total_increasing\",\"unique_id\":\"%s_boot\",%s}",
         hostname, hostname, deviceInfo);
-    Serial.println("\n[Boot Count Sensor]");
-    Serial.print("Topic: ");
-    Serial.println(topic);
-    Serial.print("Config: ");
-    Serial.println(payload);
-    mqttClient.publish(topic, payload, true);
-    
+    if (!mqttClient.publish(topic, payload, true)) {
+        Serial.println("Failed to publish boot count sensor config");
+    }
+
     // Last updated sensor
-    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s/last_updated/config", hostname);
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s_last_updated/config", hostname);
     snprintf(payload, sizeof(payload),
-        "{\"name\":\"Last Updated\",\"state_topic\":\"homeassistant/sensor/%s/state\",\"icon\":\"mdi:clock-check\",\"value_template\":\"{{ value_json.last_updated }}\",\"unique_id\":\"%s_last_updated\",%s}",
+        "{\"name\":\"Last Updated\",\"state_topic\":\"%s_last_updated/state\",\"device_class\":\"timestamp\",\"icon\":\"mdi:clock-check\",\"unique_id\":\"%s_last_updated\",%s}",
         hostname, hostname, deviceInfo);
-    Serial.println("\n[Last Updated Sensor]");
-    Serial.print("Topic: ");
-    Serial.println(topic);
-    Serial.print("Config: ");
-    Serial.println(payload);
-    mqttClient.publish(topic, payload, true);
+    if (!mqttClient.publish(topic, payload, true)) {
+        Serial.println("Failed to publish last updated sensor config");
+    }
     
     Serial.println("Home Assistant discovery published");
 }
