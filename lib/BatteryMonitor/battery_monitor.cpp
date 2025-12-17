@@ -11,12 +11,63 @@ const int BATTERY_PIN = Config::BATTERY_ADC_PIN;
 const float VOLTAGE_DIVIDER_RATIO = Config::VOLTAGE_DIVIDER_RATIO;
 const float ADC_REFERENCE_VOLTAGE = Config::ADC_REFERENCE_VOLTAGE;
 const int ADC_RESOLUTION = Config::ADC_MAX_VALUE;
-const char* BATTERY_TYPE_NAME = Config::BATTERY_TYPE_NAME;
-const float VOLTAGE_FULL = Config::Voltage::FULL;
-const float VOLTAGE_NOMINAL = Config::Voltage::NOMINAL;
-const float VOLTAGE_LOW = Config::Voltage::LOW_THRESHOLD;
-const float VOLTAGE_CRITICAL = Config::Voltage::CRITICAL;
-const float VOLTAGE_MIN = Config::Voltage::MINIMUM;
+// Dynamic values based on runtime chemistry
+const char* BATTERY_TYPE_NAME = "Lead-Acid";
+float VOLTAGE_FULL = 12.7f;
+float VOLTAGE_NOMINAL = 12.4f;
+float VOLTAGE_LOW = 12.0f;
+float VOLTAGE_CRITICAL = 11.8f;
+float VOLTAGE_MIN = 10.5f;
+
+// Internal chemistry state
+static BatteryChemistry activeChemistry = BatteryChemistry::LEAD_ACID;
+
+// Threshold sets
+struct Thresholds {
+  const char* name;
+  float FULL;
+  float NOMINAL;
+  float LOW_THRESHOLD;
+  float CRITICAL;
+  float MINIMUM;
+};
+
+static constexpr Thresholds LEAD_ACID_THRESHOLDS{
+  "Lead-Acid",
+  12.7f,
+  12.4f,
+  12.0f,
+  11.8f,
+  10.5f
+};
+
+static constexpr Thresholds LIFEPO4_THRESHOLDS{
+  "LiFePO4",
+  14.6f,
+  13.2f,
+  12.8f,
+  12.0f,
+  10.0f
+};
+
+static const Thresholds& getThresholds() {
+  return (activeChemistry == BatteryChemistry::LIFEPO4) ? LIFEPO4_THRESHOLDS : LEAD_ACID_THRESHOLDS;
+}
+
+void BatteryMonitor::setChemistry(BatteryChemistry chemistry) {
+  activeChemistry = chemistry;
+  const Thresholds& t = getThresholds();
+  BATTERY_TYPE_NAME = t.name;
+  VOLTAGE_FULL = t.FULL;
+  VOLTAGE_NOMINAL = t.NOMINAL;
+  VOLTAGE_LOW = t.LOW_THRESHOLD;
+  VOLTAGE_CRITICAL = t.CRITICAL;
+  VOLTAGE_MIN = t.MINIMUM;
+}
+
+BatteryChemistry BatteryMonitor::getChemistry() {
+  return activeChemistry;
+}
 
 // ============================================================================
 // BatteryMonitor Class Implementation
@@ -68,30 +119,30 @@ BatteryReading BatteryMonitor::readBattery() {
 
 float BatteryMonitor::calculatePercentage(float voltage) {
   // Clamp to 100% if above full voltage
-  if (voltage >= Config::Voltage::FULL) {
+  if (voltage >= VOLTAGE_FULL) {
     return 100.0f;
   }
   
   // Clamp to 0% if below minimum voltage
-  if (voltage <= Config::Voltage::MINIMUM) {
+  if (voltage <= VOLTAGE_MIN) {
     return 0.0f;
   }
   
   // Linear interpolation between minimum and full
-  float range = Config::Voltage::FULL - Config::Voltage::MINIMUM;
-  float percentage = ((voltage - Config::Voltage::MINIMUM) / range) * 100.0f;
+  float range = VOLTAGE_FULL - VOLTAGE_MIN;
+  float percentage = ((voltage - VOLTAGE_MIN) / range) * 100.0f;
   
   return constrain(percentage, 0.0f, 100.0f);
 }
 
 BatteryStatus BatteryMonitor::determineStatus(float voltage) {
-  if (voltage >= Config::Voltage::FULL) {
+  if (voltage >= VOLTAGE_FULL) {
     return BatteryStatus::FULL;
-  } else if (voltage >= Config::Voltage::NOMINAL) {
+  } else if (voltage >= VOLTAGE_NOMINAL) {
     return BatteryStatus::GOOD;
-  } else if (voltage >= Config::Voltage::LOW_THRESHOLD) {
+  } else if (voltage >= VOLTAGE_LOW) {
     return BatteryStatus::LOW_BATTERY;
-  } else if (voltage >= Config::Voltage::CRITICAL) {
+  } else if (voltage >= VOLTAGE_CRITICAL) {
     return BatteryStatus::CRITICAL;
   } else {
     return BatteryStatus::DEAD;
@@ -114,11 +165,11 @@ void BatteryMonitor::printStartupInfo() {
   Serial.println("ESP32 Battery Voltage Monitor");
   Serial.println("=================================");
   Serial.print("Battery Type: ");
-  Serial.println(Config::BATTERY_TYPE_NAME);
+  Serial.println(getBatteryTypeName());
   Serial.print("Voltage Range: ");
-  Serial.print(Config::Voltage::MINIMUM, 1);
+  Serial.print(VOLTAGE_MIN, 1);
   Serial.print("V - ");
-  Serial.print(Config::Voltage::FULL, 1);
+  Serial.print(VOLTAGE_FULL, 1);
   Serial.println("V");
   Serial.println("=================================\n");
 }
@@ -177,4 +228,17 @@ String getBatteryStatus(float voltage) {
 
 float adcToBatteryVoltage(int adcReading) {
   return BatteryMonitor::adcToVoltage(adcReading);
+}
+
+// Runtime getters
+const char* BatteryMonitor::getBatteryTypeName() {
+  return getThresholds().name;
+}
+
+float BatteryMonitor::getMinVoltage() {
+  return getThresholds().MINIMUM;
+}
+
+float BatteryMonitor::getMaxVoltage() {
+  return getThresholds().FULL;
 }

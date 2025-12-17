@@ -23,10 +23,13 @@ public:
     // Deep sleep setting
     bool deepSleepEnabled;
     
+    // Battery technology ("leadacid" or "lifepo4") stored in NVS
+    String batteryType; 
+    
     // OTA target version
     String otaTargetVersion;
     
-    ConfigManager() : mqttPort(1883), deepSleepEnabled(true), otaTargetVersion("") {}
+    ConfigManager() : mqttPort(1883), deepSleepEnabled(true), batteryType("leadacid"), otaTargetVersion("") {}
     
     void begin(const char* wifiSsidDefault, const char* wifiPassDefault,
                const char* mqttServerDefault, uint16_t mqttPortDefault,
@@ -50,6 +53,7 @@ public:
             preferences.putString("mqtt_pass", mqttPassDefault);
             preferences.putString("mqtt_id", mqttClientIDDefault);
             preferences.putBool("deep_sleep", true);
+            preferences.putString("battery_type", "leadacid");
             preferences.putBool("initialized", true);
             
             Serial.println("Default credentials saved to NVS");
@@ -64,6 +68,7 @@ public:
         mqttPassword = preferences.getString("mqtt_pass", mqttPassDefault);
         mqttClientID = preferences.getString("mqtt_id", mqttClientIDDefault);
         deepSleepEnabled = preferences.getBool("deep_sleep", true);
+        batteryType = preferences.getString("battery_type", "leadacid");
         otaTargetVersion = preferences.getString("ota_target", "");
         
         Serial.println("\n╔═══════════════════════════════════════╗");
@@ -77,6 +82,8 @@ public:
         Serial.println(mqttPort);
         Serial.print("MQTT Client ID: ");
         Serial.println(mqttClientID);
+        Serial.print("Battery Type (NVS): ");
+        Serial.println(batteryType);
         Serial.println();
     }
     
@@ -89,6 +96,7 @@ public:
         preferences.putString("mqtt_pass", mqttPassword);
         preferences.putString("mqtt_id", mqttClientID);
         preferences.putBool("deep_sleep", deepSleepEnabled);
+        preferences.putString("battery_type", batteryType);
         preferences.putString("ota_target", otaTargetVersion);
         
         Serial.println("Configuration saved to NVS");
