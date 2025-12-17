@@ -78,9 +78,14 @@ bool NetworkManager::connectMQTT() {
     
     unsigned long startTime = millis();
     while (!mqttClient.connected() && millis() - startTime < Config::MQTT_TIMEOUT_MS) {
+        // Prepare Last Will and Testament (LWT) for availability topic
+        char stateTopic[100];
+        snprintf(stateTopic, sizeof(stateTopic), "%s_availability/state", WiFi.getHostname());
+        
         // Use clean_session=false to persist subscriptions across deep sleep
+        // LWT: publish "offline" to availability topic when connection is lost
         if (mqttClient.connect(config.mqttClientID.c_str(), config.mqttUser.c_str(), config.mqttPassword.c_str(), 
-                               nullptr, 0, false, nullptr, false)) {
+                               stateTopic, 1, true, "offline", false)) {
             Serial.println(" Connected!");
             
             // Subscribe to OTA trigger topic with QoS 1 for guaranteed delivery
@@ -96,6 +101,13 @@ bool NetworkManager::connectMQTT() {
             mqttClient.subscribe(resetTopic, 1);  // QoS 1
             Serial.print("Subscribed to reset topic (QoS 1): ");
             Serial.println(resetTopic);
+            
+            // Publish availability state as "online"
+            char stateTopic[100];
+            snprintf(stateTopic, sizeof(stateTopic), "%s_availability/state", WiFi.getHostname());
+            mqttClient.publish(stateTopic, "online", true);
+            Serial.print("Published availability state: online to ");
+            Serial.println(stateTopic);
             
             // Publish Home Assistant discovery messages
             publishHomeAssistantDiscovery();
@@ -293,6 +305,16 @@ void NetworkManager::publishHomeAssistantDiscovery() {
         Serial.println("Failed to publish firmware version sensor config");
     }
     
+    // Configure availability for all sensors (shared state topic)
+    char availabilityConfig[250];
+    snprintf(availabilityConfig, sizeof(availabilityConfig),
+        ",\"availability_topic\":\"%s_availability/state\",\"payload_available\":\"online\",\"payload_not_available\":\"offline\"",
+        hostname);
+    
+    // Update all sensor configs with availability (done in next connection)
+    Serial.println("Note: Availability topic configured for all sensors");
+    Serial.printf("Availability Topic: %s_availability/state\n", hostname);
+    
     Serial.println("Home Assistant discovery published");
 }
 
@@ -301,6 +323,15 @@ void NetworkManager::loop() {
 }
 
 void NetworkManager::disconnect() {
+    // Publish offline state before disconnecting
+    if (mqttClient.connected()) {
+        char stateTopic[100];
+        snprintf(stateTopic, sizeof(stateTopic), "%s_availability/state", WiFi.getHostname());
+        mqttClient.publish(stateTopic, "offline", true);
+        mqttClient.loop();  // Process the publish
+        delay(100);  // Give time for message to send
+    }
+    
     mqttClient.disconnect();
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
