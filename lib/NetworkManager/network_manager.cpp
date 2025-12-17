@@ -194,6 +194,20 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
         }
     }
     
+    // Firmware version
+    snprintf(topic, sizeof(topic), "%s_firmware/state", hostname);
+    const char* fwVersion = 
+        #ifdef FIRMWARE_VERSION
+        FIRMWARE_VERSION
+        #else
+        "dev"
+        #endif
+    ;
+    if (!mqttClient.publish(topic, fwVersion, true)) {
+        Serial.printf("❌ Failed to publish firmware version - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+    }
+    
     Serial.printf("Published sensor states for device: %s\n", hostname);
 }
 
@@ -268,6 +282,15 @@ void NetworkManager::publishHomeAssistantDiscovery() {
         hostname, hostname, deviceInfo);
     if (!mqttClient.publish(topic, payload, true)) {
         Serial.println("Failed to publish last updated sensor config");
+    }
+    
+    // Firmware version sensor
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s_firmware/config", hostname);
+    snprintf(payload, sizeof(payload),
+        "{\"name\":\"Firmware Version\",\"state_topic\":\"%s_firmware/state\",\"icon\":\"mdi:chip\",\"entity_category\":\"diagnostic\",\"unique_id\":\"%s_firmware\",%s}",
+        hostname, hostname, deviceInfo);
+    if (!mqttClient.publish(topic, payload, true)) {
+        Serial.println("Failed to publish firmware version sensor config");
     }
     
     Serial.println("Home Assistant discovery published");
