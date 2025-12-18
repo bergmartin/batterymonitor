@@ -102,6 +102,13 @@ bool NetworkManager::connectMQTT() {
             Serial.print("Subscribed to reset topic (QoS 1): ");
             Serial.println(resetTopic);
             
+            // Subscribe to config change topic: battery type
+            char cfgBatteryTypeTopic[128];
+            snprintf(cfgBatteryTypeTopic, sizeof(cfgBatteryTypeTopic), "%s/config/battery_type", Config::MQTT_TOPIC_BASE);
+            mqttClient.subscribe(cfgBatteryTypeTopic, 1);
+            Serial.print("Subscribed to config topic (battery_type): ");
+            Serial.println(cfgBatteryTypeTopic);
+            
             // Publish availability state as "online"
             char stateTopic[100];
             snprintf(stateTopic, sizeof(stateTopic), "%s_availability/state", WiFi.getHostname());
@@ -145,6 +152,14 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
     
     // Publish each sensor to its own state topic
     char value[20];
+    
+    // Battery type
+    snprintf(topic, sizeof(topic), "%s_battery_type/state", hostname);
+    const char* typeName = BatteryMonitor::getBatteryTypeName();
+    if (!mqttClient.publish(topic, typeName, true)) {
+        Serial.printf("❌ Failed to publish battery type - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+    }
     
     // Voltage
     snprintf(topic, sizeof(topic), "%s_voltage/state", hostname);
@@ -305,6 +320,15 @@ void NetworkManager::publishHomeAssistantDiscovery() {
         Serial.println("Failed to publish firmware version sensor config");
     }
     
+    // Battery type sensor
+    snprintf(topic, sizeof(topic), "homeassistant/sensor/%s_battery_type/config", hostname);
+    snprintf(payload, sizeof(payload),
+        "{\"name\":\"Battery Type\",\"state_topic\":\"%s_battery_type/state\",\"icon\":\"mdi:battery\",\"unique_id\":\"%s_battery_type\",%s}",
+        hostname, hostname, deviceInfo);
+    if (!mqttClient.publish(topic, payload, true)) {
+        Serial.println("Failed to publish battery type sensor config");
+    }
+    
     // Configure availability for all sensors (shared state topic)
     char availabilityConfig[250];
     snprintf(availabilityConfig, sizeof(availabilityConfig),
@@ -411,5 +435,31 @@ void NetworkManager::mqttCallback(char* topic, byte* payload, unsigned int lengt
                 resetCallback();
             }
         }
+    }
+
+    // Handle configuration changes: battery type
+    if (topicStr.endsWith("/config/battery_type")) {
+        String newType = message;
+        newType.trim();
+        newType.toLowerCase();
+        if (newType == "lifepo4" || newType == "life" || newType == "li" ) {
+            config.batteryType = "lifepo4";
+            BatteryMonitor::setChemistry(BatteryChemistry::LIFEPO4);
+        } else if (newType == "leadacid" || newType == "lead" || newType == "sla") {
+            config.batteryType = "leadacid";
+            BatteryMonitor::setChemistry(BatteryChemistry::LEAD_ACID);
+        } else {
+            Serial.println("Invalid battery_type. Use 'leadacid' or 'lifepo4'.");
+            return;
+        }
+        config.saveConfig();
+        Serial.print("Battery type updated via MQTT: ");
+        Serial.println(config.batteryType);
+        // Acknowledge by publishing current type to a state topic
+        char typeStateTopic[100];
+        snprintf(typeStateTopic, sizeof(typeStateTopic), "%s_battery_type/state", WiFi.getHostname());
+        mqttClient.publish(typeStateTopic, config.batteryType.c_str(), true);
+        Serial.print("Published battery_type state: ");
+        Serial.println(typeStateTopic);
     }
 }

@@ -126,6 +126,15 @@ void setup()
                MQTT_USER, MQTT_PASSWORD,
                MQTT_CLIENT_ID);
 
+  // Apply battery chemistry from NVS
+  if (config.batteryType.equalsIgnoreCase("lifepo4")) {
+    BatteryMonitor::setChemistry(BatteryChemistry::LIFEPO4);
+    Serial.println("Battery chemistry set from NVS: LiFePO4");
+  } else {
+    BatteryMonitor::setChemistry(BatteryChemistry::LEAD_ACID);
+    Serial.println("Battery chemistry set from NVS: Lead-Acid");
+  }
+
   // Check for pending OTA update from previous wake cycle
   if (otaManager.checkPendingOTA())
   {

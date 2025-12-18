@@ -289,9 +289,9 @@ bool OTAManager::checkForUpdates() {
         Serial.println(targetVersion);
         
         // Construct firmware filename based on battery type (version in URL path)
-        #if BATTERY_TYPE == LEAD_ACID
+        #if BATTERY_TYPE == BATTERY_TYPE_LEAD_ACID
             String batteryType = "leadacid";
-        #elif BATTERY_TYPE == LIFEPO4
+        #elif BATTERY_TYPE == BATTERY_TYPE_LIFEPO4
             String batteryType = "lifepo4";
         #else
             String batteryType = "unknown";

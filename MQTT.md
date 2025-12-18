@@ -36,6 +36,13 @@ All messages are published to topics under the base: `battery/monitor/`
   }
   ```
 
+### Configuration Topics
+
+- `battery/monitor/config/battery_type` (QoS 1)
+  - Payload: `leadacid` or `lifepo4` (case-insensitive)
+  - Effect: Updates battery chemistry thresholds and persists to NVS.
+  - Acknowledgement: Device publishes current type to `{hostname}_battery_type/state`.
+
 ## Configuration
 
 ### 1. Set Up Credentials

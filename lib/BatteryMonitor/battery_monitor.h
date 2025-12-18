@@ -9,6 +9,8 @@
 
 #include <Arduino.h>
 #include "battery_config.h"
+// Runtime battery chemistry selection
+enum class BatteryChemistry { LEAD_ACID, LIFEPO4 };
 
 // Battery status enumeration
 enum class BatteryStatus {
@@ -38,6 +40,9 @@ public:
   
   // Initialization
   void begin();
+  // Runtime configuration
+  static void setChemistry(BatteryChemistry chemistry);
+  static BatteryChemistry getChemistry();
   
   // Reading functions
   BatteryReading readBattery();
@@ -54,9 +59,9 @@ public:
   void printStartupInfo();
   
   // Configuration getters
-  static const char* getBatteryTypeName() { return Config::BATTERY_TYPE_NAME; }
-  static float getMinVoltage() { return Config::Voltage::MINIMUM; }
-  static float getMaxVoltage() { return Config::Voltage::FULL; }
+  static const char* getBatteryTypeName();
+  static float getMinVoltage();
+  static float getMaxVoltage();
   
 private:
   // ADC reading function
@@ -74,10 +79,10 @@ extern const float VOLTAGE_DIVIDER_RATIO;
 extern const float ADC_REFERENCE_VOLTAGE;
 extern const int ADC_RESOLUTION;
 extern const char* BATTERY_TYPE_NAME;
-extern const float VOLTAGE_FULL;
-extern const float VOLTAGE_NOMINAL;
-extern const float VOLTAGE_LOW;
-extern const float VOLTAGE_CRITICAL;
-extern const float VOLTAGE_MIN;
+extern float VOLTAGE_FULL;
+extern float VOLTAGE_NOMINAL;
+extern float VOLTAGE_LOW;
+extern float VOLTAGE_CRITICAL;
+extern float VOLTAGE_MIN;
 
 #endif // BATTERY_MONITOR_H
