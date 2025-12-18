@@ -7,13 +7,13 @@
 #ifndef BATTERY_CONFIG_H
 #define BATTERY_CONFIG_H
 
-// Battery type definitions
-#define LEAD_ACID 1
-#define LIFEPO4 2
+// Battery type definitions (renamed to avoid collision with enum values)
+#define BATTERY_TYPE_LEAD_ACID 1
+#define BATTERY_TYPE_LIFEPO4 2
 
 // Default to Lead-Acid if not specified
 #ifndef BATTERY_TYPE
-#define BATTERY_TYPE LEAD_ACID
+#define BATTERY_TYPE BATTERY_TYPE_LEAD_ACID
 #endif
 
 // Hardware Configuration
@@ -72,7 +72,7 @@ namespace Config {
   constexpr unsigned long MQTT_TIMEOUT_MS = 15000;  // 15 seconds to connect and publish
   
   // Battery Type Specific Thresholds
-  #if BATTERY_TYPE == LEAD_ACID
+  #if BATTERY_TYPE == BATTERY_TYPE_LEAD_ACID
     constexpr char BATTERY_TYPE_NAME[] = "Lead-Acid";
     
     namespace Voltage {
@@ -83,7 +83,7 @@ namespace Config {
       constexpr float MINIMUM = 10.5;    // 0% - Minimum safe voltage
     }
     
-  #elif BATTERY_TYPE == LIFEPO4
+  #elif BATTERY_TYPE == BATTERY_TYPE_LIFEPO4
     constexpr char BATTERY_TYPE_NAME[] = "LiFePO4";
     
     namespace Voltage {
@@ -95,7 +95,7 @@ namespace Config {
     }
     
   #else
-    #error "Invalid BATTERY_TYPE. Use LEAD_ACID or LIFEPO4"
+    #error "Invalid BATTERY_TYPE. Use BATTERY_TYPE_LEAD_ACID or BATTERY_TYPE_LIFEPO4"
   #endif
 }
 

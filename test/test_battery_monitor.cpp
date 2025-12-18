@@ -48,13 +48,13 @@ void test_battery_percentage_below_minimum() {
 }
 
 void test_battery_percentage_mid_range() {
-  #if BATTERY_TYPE == LEAD_ACID
+  #if BATTERY_TYPE == BATTERY_TYPE_LEAD_ACID
     // For Lead-Acid: 11.6V should be ~50%
     // Range: 10.5V to 12.7V = 2.2V span
     // 11.6V is 1.1V above minimum = 50%
     float percentage = calculateBatteryPercentage(11.6);
     TEST_ASSERT_FLOAT_WITHIN(1.0, 50.0, percentage);
-  #elif BATTERY_TYPE == LIFEPO4
+  #elif BATTERY_TYPE == BATTERY_TYPE_LIFEPO4
     // For LiFePO4: 12.3V should be ~50%
     // Range: 10.0V to 14.6V = 4.6V span
     // 12.3V is 2.3V above minimum = 50%
@@ -156,9 +156,9 @@ void test_voltage_divider_safety() {
   // For LiFePO4: 14.6V / 4.0 = 3.65V (exceeds 3.3V - needs higher ratio!)
   float maxAdcVoltage = VOLTAGE_FULL / VOLTAGE_DIVIDER_RATIO;
   
-  #if BATTERY_TYPE == LEAD_ACID
+  #if BATTERY_TYPE == BATTERY_TYPE_LEAD_ACID
     TEST_ASSERT_LESS_THAN(ADC_REFERENCE_VOLTAGE, maxAdcVoltage);
-  #elif BATTERY_TYPE == LIFEPO4
+  #elif BATTERY_TYPE == BATTERY_TYPE_LIFEPO4
     // For LiFePO4, we expect this to be close to or slightly over 3.3V
     // This is a known limitation - test documents it
     TEST_ASSERT_FLOAT_WITHIN(0.5, ADC_REFERENCE_VOLTAGE, maxAdcVoltage);
@@ -170,11 +170,11 @@ void test_voltage_divider_safety() {
 // ============================================================================
 
 void test_battery_type_thresholds() {
-  #if BATTERY_TYPE == LEAD_ACID
+  #if BATTERY_TYPE == BATTERY_TYPE_LEAD_ACID
     TEST_ASSERT_EQUAL_STRING("Lead-Acid", BATTERY_TYPE_NAME);
     TEST_ASSERT_EQUAL_FLOAT(12.7, VOLTAGE_FULL);
     TEST_ASSERT_EQUAL_FLOAT(10.5, VOLTAGE_MIN);
-  #elif BATTERY_TYPE == LIFEPO4
+  #elif BATTERY_TYPE == BATTERY_TYPE_LIFEPO4
     TEST_ASSERT_EQUAL_STRING("LiFePO4", BATTERY_TYPE_NAME);
     TEST_ASSERT_EQUAL_FLOAT(14.6, VOLTAGE_FULL);
     TEST_ASSERT_EQUAL_FLOAT(10.0, VOLTAGE_MIN);
