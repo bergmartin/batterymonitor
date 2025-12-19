@@ -45,14 +45,14 @@ namespace Config {
   
   // Deep Sleep Configuration
   constexpr bool ENABLE_DEEP_SLEEP = true;  // Enable power-saving deep sleep
-  constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 120000000ULL;  // 2 minutes in microseconds
+  constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 3600000000ULL;  // 1 hour in microseconds
   constexpr int AWAKE_TIME_MS = 5000;  // Time to stay awake for reading and display
   
   // WiFi Configuration
   // IMPORTANT: Create wifi_credentials.h with your WiFi credentials:
   // #define WIFI_SSID "your-wifi-ssid"
   // #define WIFI_PASSWORD "your-wifi-password"
-  constexpr unsigned long WIFI_TIMEOUT_MS = 20000;  // 20 seconds to connect
+  constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds to connect
   
   // Static IP Configuration (set to false to use DHCP)
   constexpr bool USE_STATIC_IP = false;
