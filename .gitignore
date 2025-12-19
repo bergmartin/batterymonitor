@@ -8,3 +8,5 @@ include/mqtt_credentials.h
 **/*.stl
 
 .vscode
+
+**/*.sh
