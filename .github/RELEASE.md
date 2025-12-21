@@ -83,7 +83,7 @@ The workflow creates placeholder credential files for building. **Users must con
 
 3. Build and upload locally:
    ```bash
-   pio run -e esp32dev-leadacid -t upload
+   pio run -e esp32dev -t upload
    ```
 
 ## Versioning Guidelines
@@ -116,11 +116,12 @@ Make sure to specify the correct firmware file:
 If you prefer not to use GitHub Actions:
 
 ```bash
-# Build locally
-pio run -e esp32dev-leadacid
-pio run -e esp32dev-lifepo4
+# Build locally (default: Lead-Acid)
+pio run -e esp32dev
+
+# Build for LiFePO4
+pio run -e esp32dev -D BATTERY_TYPE=BATTERY_TYPE_LIFEPO4
 
 # Create release manually on GitHub
-# Upload .pio/build/esp32dev-leadacid/firmware.bin
-# Upload .pio/build/esp32dev-lifepo4/firmware.bin
+# Upload .pio/build/esp32dev/firmware.bin
 ```

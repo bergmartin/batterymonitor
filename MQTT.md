@@ -4,7 +4,7 @@ This document explains how to configure and use the MQTT functionality for publi
 
 ## Overview
 
-The battery monitor publishes readings to an MQTT broker every 4 hours (configurable). This enables:
+The battery monitor publishes readings to an MQTT broker every 1 hour (configurable). This enables:
 - Remote monitoring via MQTT clients (Home Assistant, Node-RED, etc.)
 - Historical data logging
 - Alerting and automation based on battery status
@@ -79,9 +79,9 @@ Edit `include/mqtt_credentials.h`:
 ### 4. Build and Upload
 
 ```bash
-pio run -e esp32dev-leadacid --target upload
-# or
-pio run -e esp32dev-lifepo4 --target upload
+pio run -e esp32dev --target upload
+# or for LiFePO4
+pio run -e esp32dev -D BATTERY_TYPE=BATTERY_TYPE_LIFEPO4 --target upload
 ```
 
 ## MQTT Broker Options
@@ -235,7 +235,7 @@ With MQTT enabled:
 - **Awake time**: ~10-15 seconds (WiFi + MQTT connection + publish)
 - **Active current**: ~80-160 mA
 - **Deep sleep**: ~0.01 mA
-- **Average consumption**: ~0.3-0.5 mA (with 4-hour intervals)
+- **Average consumption**: ~0.3-0.5 mA (with 1-hour intervals)
 
 WiFi connection adds ~5-8 seconds to wake time.
 
@@ -299,7 +299,7 @@ Results in topics like:
 Edit in `lib/BatteryMonitor/battery_config.h`:
 
 ```cpp
-constexpr unsigned long WIFI_TIMEOUT_MS = 15000;  // 15 seconds
+constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds (default)
 constexpr unsigned long MQTT_TIMEOUT_MS = 10000;  // 10 seconds
 ```
 

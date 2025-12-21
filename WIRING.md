@@ -266,7 +266,7 @@ Use labels or tape markers to identify:
 
 ## Power Consumption from Battery
 
-With current configuration (4-hour deep sleep):
+With current configuration (1-hour deep sleep):
 
 | State | Current Draw (from 12V) | Time per Day |
 |-------|------------------------|--------------|

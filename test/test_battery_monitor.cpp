@@ -8,7 +8,7 @@
  * - Boundary conditions
  * 
  * Note: These tests run on ESP32 hardware. Code compiles successfully.
- * To run tests, connect ESP32 and execute: pio test -e esp32dev-leadacid
+ * To run tests, connect ESP32 and execute: pio test -e esp32dev
  */
 
 #include <Arduino.h>

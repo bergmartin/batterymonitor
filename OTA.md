@@ -168,9 +168,8 @@ Get firmware binary from PlatformIO build:
 # Build the project
 pio run
 
-# Binary locations:
-.pio/build/esp32dev-leadacid/firmware.bin
-.pio/build/esp32dev-lifepo4/firmware.bin
+# Binary location:
+.pio/build/esp32dev/firmware.bin
 ```
 
 ### Testing with Local Server
@@ -185,7 +184,7 @@ For local testing without GitHub:
 
 2. **Serve the firmware:**
 ```bash
-cd .pio/build/esp32dev-leadacid/
+cd .pio/build/esp32dev/
 python -m http.server 8000
 ```
 
@@ -364,5 +363,5 @@ mosquitto_pub -h BROKER \
   -m "v1.0.4/firmware-leadacid.bin"
 
 # Trigger persists in NVS
-# Processes automatically on next wake (up to 4 hours later)
+# Processes automatically on next wake (up to 1 hour later)
 ```

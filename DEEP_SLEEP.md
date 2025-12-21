@@ -40,11 +40,11 @@ Calculation:
 
 **Power @ 12V:** 1.4-2.8 mW (milliwatts!)
 
-**Daily consumption:** 2.9-5.5 mAh (0.0029-0.0055 Ah)
+**Daily consumption:** 2.9-5.6 mAh (0.0029-0.0056 Ah)
 
 **Battery Life (100 Ah battery):**
-- Best case: **18,182 days (49.8 years)**
-- Worst case: **34,483 days (94.5 years)**
+- Best case: **94.2 years** (low current: 0.121 mA)
+- Worst case: **49.1 years** (high current: 0.232 mA)
 
 ## Improvement Summary
 
@@ -52,7 +52,7 @@ Calculation:
 |--------|--------|-------|-------------|
 | Average Current | 80-160 mA | 0.12-0.23 mA | **99.8% reduction** |
 | Average Power | 0.96-1.92 W | 1.4-2.8 mW | **99.85% reduction** |
-| Daily Usage | 1.92-3.84 Ah | 2.9-5.5 mAh | **700x less** |
+| Daily Usage | 1.92-3.84 Ah | 2.9-5.6 mAh | **700x less** |
 | Battery Life | 26-52 days | 49-94 years | **700x longer** |
 
 ## Features
@@ -102,6 +102,9 @@ constexpr bool ENABLE_DEEP_SLEEP = false;
 
 ### Change Reading Interval
 ```cpp
+// 1 hour (default)
+constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 3600000000ULL;
+
 // 30 minutes
 constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 1800000000ULL;
 

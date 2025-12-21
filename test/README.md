@@ -46,13 +46,13 @@ The test suite (`test_battery_monitor.cpp`) covers:
 pio test
 
 # Run tests on ESP32 hardware
-pio test -e esp32dev-leadacid
+pio test -e esp32dev
 ```
 
 ### Run Tests for LiFePO4 Battery
 ```bash
 # Run tests with LiFePO4 configuration
-pio test -e esp32dev-lifepo4
+pio test -e esp32dev -D BATTERY_TYPE=BATTERY_TYPE_LIFEPO4
 ```
 
 ### Run Specific Test
@@ -140,8 +140,8 @@ These tests can be integrated into CI/CD pipelines:
 # Example GitHub Actions
 - name: Run PlatformIO Tests
   run: |
-    pio test -e esp32dev-leadacid
-    pio test -e esp32dev-lifepo4
+    pio test -e esp32dev
+    pio test -e esp32dev -D BATTERY_TYPE=BATTERY_TYPE_LIFEPO4
 ```
 
 ## Troubleshooting

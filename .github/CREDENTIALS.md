@@ -48,10 +48,10 @@ nano include/wifi_credentials.h
 nano include/mqtt_credentials.h
 
 # 3. Build and upload (USB) - includes YOUR credentials
-pio run -e esp32dev-leadacid -t upload
+pio run -e esp32dev -t upload
 
 # 4. Future updates via OTA - credentials preserved
-mosquitto_pub -h BROKER -t "battery/monitor/ota" -m "batterymonitor-leadacid.bin"
+mosquitto_pub -h BROKER -t "battery/monitor/ota" -m "batterymonitor.bin"
 ```
 
 **GitHub release binaries contain:** Placeholder credentials  
@@ -102,13 +102,13 @@ EOF
 #### C. Use the Release
 ```bash
 # 1. Download firmware from GitHub release
-wget https://github.com/USER/REPO/releases/download/v1.0.0/firmware-leadacid.bin
+wget https://github.com/USER/REPO/releases/download/v1.0.0/firmware.bin
 
 # 2. Upload directly - no credential configuration needed!
-pio run -e esp32dev-leadacid -t upload
+pio run -e esp32dev -t upload
 
 # 3. OTA updates work immediately
-mosquitto_pub -h BROKER -t "battery/monitor/ota" -m "batterymonitor-leadacid.bin"
+mosquitto_pub -h BROKER -t "battery/monitor/ota" -m "firmware.bin"
 ```
 
 **⚠️ Security Warning:**
@@ -181,13 +181,13 @@ cd batterymonitor
 cp include/*.h.example include/
 nano include/wifi_credentials.h  # Add your WiFi
 nano include/mqtt_credentials.h  # Add your MQTT
-pio run -e esp32dev-leadacid -t upload  # Upload via USB
+pio run -e esp32dev -t upload  # Upload via USB
 
 # Day 30: Firmware update available (no USB needed!)
 # Device wakes up, checks MQTT, receives update command
 mosquitto_pub -h mqtt.home.local \
   -t "battery/monitor/ota" \
-  -m "batterymonitor-leadacid.bin"
+  -m "firmware.bin"
 
 # Device downloads from GitHub, installs, reboots
 # Credentials unchanged, firmware updated ✓

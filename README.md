@@ -118,10 +118,10 @@ pio device monitor
 **For LiFePO4 battery:**
 ```bash
 # Build for LiFePO4
-pio run -e esp32dev-lifepo4
+pio run -e esp32dev -D BATTERY_TYPE=BATTERY_TYPE_LIFEPO4
 
 # Upload to ESP32
-pio run -e esp32dev-lifepo4 --target upload
+pio run -e esp32dev -D BATTERY_TYPE=BATTERY_TYPE_LIFEPO4 --target upload
 
 # Monitor serial output
 pio device monitor
@@ -132,7 +132,7 @@ pio device monitor
 Change the build flag in the default `[env:esp32dev]` section:
 ```ini
 build_flags = 
-  -D BATTERY_TYPE=LIFEPO4  ; or LEAD_ACID
+  -D BATTERY_TYPE=BATTERY_TYPE_LIFEPO4  ; Options: BATTERY_TYPE_LEAD_ACID or BATTERY_TYPE_LIFEPO4
 ```
 
 Or use PlatformIO IDE buttons in VS Code.
@@ -145,12 +145,12 @@ The project includes comprehensive unit tests for all battery monitoring logic.
 
 **Test Lead-Acid configuration:**
 ```bash
-pio test -e esp32dev-leadacid
+pio test -e esp32dev
 ```
 
 **Test LiFePO4 configuration:**
 ```bash
-pio test -e esp32dev-lifepo4
+pio test -e esp32dev -D BATTERY_TYPE=BATTERY_TYPE_LIFEPO4
 ```
 
 **Test both configurations:**
@@ -173,9 +173,9 @@ See `test/README.md` for detailed testing documentation.
 
 The project supports two battery types, configured at **build time**:
 
-**Option 1: Use predefined environments**
-- `esp32dev` or `esp32dev-leadacid` - For Lead-Acid batteries
-- `esp32dev-lifepo4` - For LiFePO4 batteries
+**Option 1: Use the default environment with build flag**
+- `esp32dev` with default `BATTERY_TYPE_LEAD_ACID` build flag
+- `esp32dev` with `-D BATTERY_TYPE=BATTERY_TYPE_LIFEPO4` build flag for LiFePO4
 
 **Option 2: Edit the default environment**
 
@@ -206,12 +206,13 @@ The voltage thresholds are automatically set based on battery type:
 
 ### Other Adjustable Parameters
 
-You can adjust these parameters in `src/main.cpp`:
+You can adjust these parameters in `lib/BatteryMonitor/battery_config.h` (in the `Config` namespace):
 
 ```cpp
-const int BATTERY_PIN = 34;           // ADC pin (GPIO34)
-const float VOLTAGE_DIVIDER_RATIO = 4.0;  // Adjust if using different resistors
-const unsigned long READING_INTERVAL = 2000;  // Reading interval in ms
+constexpr int BATTERY_ADC_PIN = 34;           // ADC pin (GPIO34)
+constexpr float VOLTAGE_DIVIDER_RATIO = 4.0;  // Adjust if using different resistors
+constexpr unsigned long READING_INTERVAL_MS = 10000;  // Reading interval (active mode, 10 seconds)
+constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 3600000000ULL;  // Deep sleep interval (1 hour)
 ```
 
 ### For Different Resistor Values
