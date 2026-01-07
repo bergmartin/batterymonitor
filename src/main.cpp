@@ -28,6 +28,7 @@
 #include "network_manager.h"
 #include "ota_manager.h"
 #include "command_handler.h"
+#include "display_manager.h"
 
 // Include credentials (create these files!)
 // These are now used as DEFAULT VALUES only - actual credentials stored in NVS
@@ -44,8 +45,9 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 ConfigManager config; // Manages credentials in NVS (persists across OTA updates)
 NetworkManager network(wifiClient, mqttClient, config);
-OTAManager otaManager(config);
 CommandHandler commandHandler(config);
+DisplayManager display;
+OTAManager otaManager(config, &display);
 
 void printWakeupReason()
 {
@@ -76,13 +78,31 @@ void printWakeupReason()
 
 void enterDeepSleep()
 {
+  // Calculate next wakeup time
+  time_t now;
+  time(&now);
+  time_t wakeupTime = now + (Config::DEEP_SLEEP_INTERVAL_US / 1000000);
+  struct tm* timeinfo = localtime(&wakeupTime);
+  
+  char wakeupISO[25];
+  strftime(wakeupISO, sizeof(wakeupISO), "%Y-%m-%dT%H:%M:%S", timeinfo);
+  
   Serial.println("\n─────────────────────────────────");
   Serial.println("Entering deep sleep mode...");
   Serial.print("Next reading in: ");
   Serial.print(Config::DEEP_SLEEP_INTERVAL_US / 1000000);
   Serial.println(" seconds");
+  Serial.print("Wake at: ");
+  Serial.println(wakeupISO);
   Serial.println("Power consumption: ~10 µA");
   Serial.println("─────────────────────────────────");
+  
+  // Show sleep screen on display
+  if (display.isReady()) {
+    display.showSleepScreen(wakeupISO);
+    delay(2000); // Show sleep screen for 2 seconds
+  }
+  
   Serial.flush(); // Wait for serial transmission to complete
 
   // Configure timer wakeup
@@ -120,6 +140,13 @@ void setup()
 
   Serial.println();
 
+  // Initialize display early
+  display.begin();
+  if (display.isReady()) {
+    display.showBootScreen(bootCount);
+    delay(1000); // Show boot screen for 1 second
+  }
+
   // Initialize configuration manager (loads from NVS or uses defaults on first run)
   config.begin(WIFI_SSID, WIFI_PASSWORD,
                MQTT_SERVER, MQTT_PORT,
@@ -141,6 +168,10 @@ void setup()
     Serial.println("OTA update was triggered while device was asleep.");
     Serial.println("Processing OTA update now...");
     
+    if (display.isReady()) {
+      display.showOTAScreen("Processing...");
+    }
+    
     // Connect to WiFi for OTA
     if (network.connectWiFi())
     {
@@ -154,7 +185,11 @@ void setup()
     {
       Serial.println("Failed to connect to WiFi for OTA. Will retry next boot.");
     }
-  }
+  }if (display.isReady()) {
+      display.showOTAScreen("Checking...");
+    }
+    
+    
   // Automatically check for available updates on every wake
   else if (Config::AUTO_CHECK_OTA)
   {
@@ -210,10 +245,22 @@ void loop()
   // Display reading
   monitor.printReading(reading);
 
+  // Update display with battery info (WiFi not connected yet)
+  if (display.isReady()) {
+    display.update(reading, false, 0);
+  }
+
   // Connect to WiFi and MQTT, then publish
   Serial.println("\n─────────────────────────────────");
   if (network.connectWiFi())
   {
+    // Get WiFi RSSI
+    int8_t rssi = WiFi.RSSI();
+    
+    // Update display with WiFi info
+    if (display.isReady()) {
+      display.update(reading, true, rssi);
+    }
     // Initialize OTA early (only once per wake cycle)
     static bool otaInitialized = false;
     if (!otaInitialized)
@@ -232,11 +279,20 @@ void loop()
       while (millis() - checkStart < 3000)
       {
         network.loop();
+        
+        // Update display periodically
+        if (display.isReady() && millis() % 500 < 100) {
+          display.update(reading, true, WiFi.RSSI());
+        }
+        
         delay(100);
 
         // If OTA is requested, handle it
         if (otaManager.isUpdateRequested())
         {
+          if (display.isReady()) {
+            display.showOTAScreen("Starting...");
+          }
           otaManager.handleUpdate();
           break;
         }

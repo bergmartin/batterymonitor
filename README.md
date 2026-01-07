@@ -7,12 +7,14 @@ A PlatformIO project for monitoring 12V battery voltage using an ESP32 microcont
 - **Ultra-Low Power:** Deep sleep mode with only 0.12-0.23 mA average draw (99.8% power reduction!)
 - **Long Battery Life:** Monitor can run for years on the battery it's monitoring
 - **MQTT Integration:** Publish readings to MQTT broker for remote monitoring (Home Assistant, Node-RED, etc.)
+- **OLED Display:** SH1106 128x64 display shows battery voltage, percentage, status, and WiFi signal strength
 - Real-time 12V battery voltage monitoring
 - Support for **Lead-Acid** and **LiFePO4** battery types
 - Battery type configured at build time
 - Battery percentage calculation with type-specific thresholds
 - Battery status indicators (FULL, GOOD, LOW_BATTERY, CRITICAL, DEAD)
-- Visual battery level display
+- Visual battery level display with progress bar
+- WiFi signal strength indicator
 - Low battery warnings
 - Averaged ADC readings for accuracy
 - RTC memory for persistent data across sleep cycles
@@ -27,7 +29,7 @@ A PlatformIO project for monitoring 12V battery voltage using an ESP32 microcont
 
 **Deep sleep mode draws less power than the battery loses naturally!**
 
-See [DEEP_SLEEP.md](DEEP_SLEEP.md) for detailed power analysis.
+See [DEEP_SLEEP.md](doc/DEEP_SLEEP.md) for detailed power analysis.
 
 ## Hardware Requirements
 
@@ -36,6 +38,7 @@ See [DEEP_SLEEP.md](DEEP_SLEEP.md) for detailed power analysis.
 - 12V battery
 - 30kΩ resistor (R1)
 - 10kΩ resistor (R2)
+- SH1106 OLED Display (128x64, I2C) - optional but recommended
 - Connecting wires
 
 ### Circuit Diagram
@@ -95,7 +98,7 @@ To enable remote monitoring via MQTT:
    # Edit mqtt_credentials.h with your MQTT broker details
    ```
 
-3. **See [MQTT.md](MQTT.md) for complete MQTT setup guide**, including:
+3. **See [MQTT.md](doc/MQTT.md) for complete MQTT setup guide**, including:
    - MQTT broker options (Mosquitto, CloudMQTT, Home Assistant)
    - Topic structure and JSON format
    - Home Assistant integration
@@ -319,17 +322,20 @@ For more accurate readings, you can calibrate the system:
 - Check for electromagnetic interference
 
 **MQTT not connecting:**
-- See [MQTT.md](MQTT.md) troubleshooting section
+- See [MQTT.md](doc/MQTT.md) troubleshooting section
 - Verify WiFi credentials in `include/wifi_credentials.h`
 - Check MQTT broker is accessible and credentials are correct
 - Test broker with mosquitto-clients: `mosquitto_sub -h broker -t "#"`
 
 ## Documentation
 
-- **[WIRING.md](WIRING.md)** - Detailed wiring instructions with buck converter setup
-- **[DEEP_SLEEP.md](DEEP_SLEEP.md)** - Deep sleep implementation and power analysis
-- **[MQTT.md](MQTT.md)** - MQTT setup, configuration, and integration guide
-- **[REFACTORING.md](REFACTORING.md)** - Code structure and refactoring documentation
+- **[WIRING.md](doc/WIRING.md)** - Detailed wiring instructions with buck converter setup
+- **[DISPLAY.md](doc/DISPLAY.md)** - SH1106 OLED display wiring and configuration
+- **[DEEP_SLEEP.md](doc/DEEP_SLEEP.md)** - Deep sleep implementation and power analysis
+- **[MQTT.md](doc/MQTT.md)** - MQTT setup, configuration, and integration guide
+- **[OTA.md](doc/OTA.md)** - Over-the-Air update setup and usage
+- **[REFACTORING.md](doc/REFACTORING.md)** - Code structure and refactoring documentation
+- **[AGENTS.md](doc/AGENTS.md)** - AI assistant context and best practices
 - **[test/README.md](test/README.md)** - Testing framework and test documentation
 - **[enclosure/README.md](enclosure/README.md)** - 3D printable enclosure guide
 

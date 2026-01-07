@@ -10,3 +10,15 @@ include/mqtt_credentials.h
 .vscode
 
 **/*.sh
+
+# KiCad backup and cache files
+**/*.lck
+**/*.zip
+**/fp-info-cache
+**/*-backups/*
+**/*~
+**/*.bak
+**/#auto_saved_files#
+**/*.kicad_sch~
+**/*.kicad_pcb~
+**/*.kicad_prl~
