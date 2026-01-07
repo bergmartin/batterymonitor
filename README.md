@@ -98,7 +98,7 @@ To enable remote monitoring via MQTT:
    # Edit mqtt_credentials.h with your MQTT broker details
    ```
 
-3. **See [MQTT.md](MQTT.md) for complete MQTT setup guide**, including:
+3. **See [MQTT.md](docs/MQTT.md) for complete MQTT setup guide**, including:
    - MQTT broker options (Mosquitto, CloudMQTT, Home Assistant)
    - Topic structure and JSON format
    - Home Assistant integration

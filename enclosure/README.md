@@ -130,7 +130,7 @@ Print Speed:         50mm/s
 4. **Connect Wiring**
    - Thread wires through cable entry holes
    - Use wire management clips to secure
-   - Connect all components as per WIRING.md
+   - Connect all components as per [WIRING.md](../docs/WIRING.md)
    - Ensure wires don't interfere with lid
 
 5. **Test Before Closing**
