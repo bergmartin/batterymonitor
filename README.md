@@ -29,7 +29,7 @@ A PlatformIO project for monitoring 12V battery voltage using an ESP32 microcont
 
 **Deep sleep mode draws less power than the battery loses naturally!**
 
-See [DEEP_SLEEP.md](docs/DEEP_SLEEP.md) for detailed power analysis.
+See [DEEP_SLEEP.md](doc/DEEP_SLEEP.md) for detailed power analysis.
 
 ## Hardware Requirements
 
@@ -98,7 +98,7 @@ To enable remote monitoring via MQTT:
    # Edit mqtt_credentials.h with your MQTT broker details
    ```
 
-3. **See [MQTT.md](docs/MQTT.md) for complete MQTT setup guide**, including:
+3. **See [MQTT.md](doc/MQTT.md) for complete MQTT setup guide**, including:
    - MQTT broker options (Mosquitto, CloudMQTT, Home Assistant)
    - Topic structure and JSON format
    - Home Assistant integration
@@ -322,20 +322,20 @@ For more accurate readings, you can calibrate the system:
 - Check for electromagnetic interference
 
 **MQTT not connecting:**
-- See [MQTT.md](docs/MQTT.md) troubleshooting section
+- See [MQTT.md](doc/MQTT.md) troubleshooting section
 - Verify WiFi credentials in `include/wifi_credentials.h`
 - Check MQTT broker is accessible and credentials are correct
 - Test broker with mosquitto-clients: `mosquitto_sub -h broker -t "#"`
 
 ## Documentation
 
-- **[WIRING.md](docs/WIRING.md)** - Detailed wiring instructions with buck converter setup
-- **[DISPLAY.md](docs/DISPLAY.md)** - SH1106 OLED display wiring and configuration
-- **[DEEP_SLEEP.md](docs/DEEP_SLEEP.md)** - Deep sleep implementation and power analysis
-- **[MQTT.md](docs/MQTT.md)** - MQTT setup, configuration, and integration guide
-- **[OTA.md](docs/OTA.md)** - Over-the-Air update setup and usage
-- **[REFACTORING.md](docs/REFACTORING.md)** - Code structure and refactoring documentation
-- **[AGENTS.md](docs/AGENTS.md)** - AI assistant context and best practices
+- **[WIRING.md](doc/WIRING.md)** - Detailed wiring instructions with buck converter setup
+- **[DISPLAY.md](doc/DISPLAY.md)** - SH1106 OLED display wiring and configuration
+- **[DEEP_SLEEP.md](doc/DEEP_SLEEP.md)** - Deep sleep implementation and power analysis
+- **[MQTT.md](doc/MQTT.md)** - MQTT setup, configuration, and integration guide
+- **[OTA.md](doc/OTA.md)** - Over-the-Air update setup and usage
+- **[REFACTORING.md](doc/REFACTORING.md)** - Code structure and refactoring documentation
+- **[AGENTS.md](doc/AGENTS.md)** - AI assistant context and best practices
 - **[test/README.md](test/README.md)** - Testing framework and test documentation
 - **[enclosure/README.md](enclosure/README.md)** - 3D printable enclosure guide
 
