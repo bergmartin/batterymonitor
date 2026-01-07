@@ -78,17 +78,28 @@ void printWakeupReason()
 
 void enterDeepSleep()
 {
+  // Calculate next wakeup time
+  time_t now;
+  time(&now);
+  time_t wakeupTime = now + (Config::DEEP_SLEEP_INTERVAL_US / 1000000);
+  struct tm* timeinfo = localtime(&wakeupTime);
+  
+  char wakeupISO[25];
+  strftime(wakeupISO, sizeof(wakeupISO), "%Y-%m-%dT%H:%M:%S", timeinfo);
+  
   Serial.println("\n─────────────────────────────────");
   Serial.println("Entering deep sleep mode...");
   Serial.print("Next reading in: ");
   Serial.print(Config::DEEP_SLEEP_INTERVAL_US / 1000000);
   Serial.println(" seconds");
+  Serial.print("Wake at: ");
+  Serial.println(wakeupISO);
   Serial.println("Power consumption: ~10 µA");
   Serial.println("─────────────────────────────────");
   
   // Show sleep screen on display
   if (display.isReady()) {
-    display.showSleepScreen(Config::DEEP_SLEEP_INTERVAL_US / 1000000);
+    display.showSleepScreen(wakeupISO);
     delay(2000); // Show sleep screen for 2 seconds
   }
   

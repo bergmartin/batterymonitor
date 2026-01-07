@@ -230,18 +230,19 @@ void DisplayManager::showOTAError(const char* error) {
     display.sendBuffer();
 }
 
-void DisplayManager::showSleepScreen(int seconds) {
+void DisplayManager::showSleepScreen(const char* wakeupTime) {
     if (!initialized) return;
     
     display.clearBuffer();
     
     display.setFont(u8g2_font_9x15_tr);
-    display.drawStr(5, 25, "Deep Sleep");
+    display.drawStr(5, 15, "Deep Sleep");
+    
+    display.setFont(u8g2_font_6x10_tr);
+    display.drawStr(5, 35, "Wake at:");
     
     display.setFont(u8g2_font_7x13_tr);
-    char buffer[32];
-    snprintf(buffer, sizeof(buffer), "Wake in: %ds", seconds);
-    display.drawStr(5, 45, buffer);
+    display.drawStr(5, 50, wakeupTime);
     
     display.sendBuffer();
 }
