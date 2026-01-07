@@ -45,9 +45,9 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 ConfigManager config; // Manages credentials in NVS (persists across OTA updates)
 NetworkManager network(wifiClient, mqttClient, config);
-OTAManager otaManager(config);
 CommandHandler commandHandler(config);
 DisplayManager display;
+OTAManager otaManager(config, &display);
 
 void printWakeupReason()
 {

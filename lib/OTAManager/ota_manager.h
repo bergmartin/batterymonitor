@@ -10,6 +10,9 @@
 #include <Preferences.h>
 #include "config_manager.h"
 
+// Forward declaration
+class DisplayManager;
+
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 2
 #endif
@@ -21,6 +24,7 @@
 class OTAManager {
 private:
     ConfigManager& config;
+    DisplayManager* display;
     bool otaRequested;
     String otaFilename;
     Preferences preferences;
@@ -30,7 +34,7 @@ private:
     bool isNewerVersion(const String& latestVersion, const String& currentVersion);
     
 public:
-    OTAManager(ConfigManager& cfg);
+    OTAManager(ConfigManager& cfg, DisplayManager* disp = nullptr);
     
     void setup();
     void requestUpdate(const String& filename);

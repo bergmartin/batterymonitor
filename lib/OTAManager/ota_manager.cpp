@@ -1,8 +1,9 @@
 #include "ota_manager.h"
 #include "battery_config.h"
+#include "display_manager.h"
 
-OTAManager::OTAManager(ConfigManager& cfg) 
-    : config(cfg), otaRequested(false), otaFilename("") {}
+OTAManager::OTAManager(ConfigManager& cfg, DisplayManager* disp) 
+    : config(cfg), display(disp), otaRequested(false), otaFilename("") {}
 
 void OTAManager::saveOTATrigger(const String& filename) {
     preferences.begin("ota", false);
@@ -47,7 +48,7 @@ void OTAManager::setup() {
     // Optionally set password for OTA updates
     // ArduinoOTA.setPassword("admin");
     
-    ArduinoOTA.onStart([]() {
+    ArduinoOTA.onStart([this]() {
         String type;
         if (ArduinoOTA.getCommand() == U_FLASH) {
             type = "sketch";
@@ -58,30 +59,53 @@ void OTAManager::setup() {
         Serial.println("║   OTA Update Started          ║");
         Serial.println("╚═══════════════════════════════╝");
         Serial.println("Type: " + type);
+        
+        if (display && display->isReady()) {
+            display->showOTAScreen("Starting...");
+        }
     });
     
-    ArduinoOTA.onEnd([]() {
+    ArduinoOTA.onEnd([this]() {
         Serial.println("\n╔═══════════════════════════════╗");
         Serial.println("║   OTA Update Complete         ║");
         Serial.println("╚═══════════════════════════════╝");
+        
+        if (display && display->isReady()) {
+            display->showOTAComplete();
+        }
     });
     
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    ArduinoOTA.onProgress([this](unsigned int progress, unsigned int total) {
         Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+        
+        if (display && display->isReady()) {
+            display->showOTAProgress(progress, total);
+        }
     });
     
-    ArduinoOTA.onError([](ota_error_t error) {
+    ArduinoOTA.onError([this](ota_error_t error) {
         Serial.printf("\nError[%u]: ", error);
+        const char* errorMsg = "Unknown";
         if (error == OTA_AUTH_ERROR) {
             Serial.println("Auth Failed");
+            errorMsg = "Auth Failed";
         } else if (error == OTA_BEGIN_ERROR) {
             Serial.println("Begin Failed");
+            errorMsg = "Begin Failed";
         } else if (error == OTA_CONNECT_ERROR) {
             Serial.println("Connect Failed");
+            errorMsg = "Connect Failed";
         } else if (error == OTA_RECEIVE_ERROR) {
             Serial.println("Receive Failed");
+            errorMsg = "Receive Failed";
         } else if (error == OTA_END_ERROR) {
             Serial.println("End Failed");
+            errorMsg = "End Failed";
+        }
+        
+        if (display && display->isReady()) {
+            display->showOTAError(errorMsg);
+            delay(3000); // Show error for 3 seconds
         }
     });
     
@@ -193,30 +217,47 @@ bool OTAManager::performHTTPUpdate(const String& filename) {
     httpUpdate.setLedPin(LED_BUILTIN, LOW);
     
     // Add callbacks for update progress
-    httpUpdate.onStart([]() {
+    httpUpdate.onStart([this]() {
         Serial.println("HTTP Update Started...");
+        if (display && display->isReady()) {
+            display->showOTAScreen("Starting...");
+        }
     });
     
-    httpUpdate.onEnd([]() {
+    httpUpdate.onEnd([this]() {
         Serial.println("\nHTTP Update Complete!");
+        if (display && display->isReady()) {
+            display->showOTAComplete();
+        }
     });
     
-    httpUpdate.onProgress([](int current, int total) {
+    httpUpdate.onProgress([this](int current, int total) {
         Serial.printf("Progress: %d%%\r", (current * 100) / total);
+        if (display && display->isReady()) {
+            display->showOTAProgress(current, total);
+        }
     });
     
-    httpUpdate.onError([](int error) {
+    httpUpdate.onError([this](int error) {
         Serial.printf("\nHTTP Update Error (%d): ", error);
+        const char* errorMsg = "Unknown";
         switch(error) {
             case HTTP_UPDATE_FAILED:
                 Serial.println("Update failed");
+                errorMsg = "Update failed";
                 break;
             case HTTP_UPDATE_NO_UPDATES:
                 Serial.println("No updates available");
+                errorMsg = "No updates";
                 break;
             case HTTP_UPDATE_OK:
                 Serial.println("Update OK (shouldn't see this as error)");
+                errorMsg = "Update OK";
                 break;
+        }
+        if (display && display->isReady()) {
+            display->showOTAError(errorMsg);
+            delay(3000); // Show error for 3 seconds
         }
     });
     

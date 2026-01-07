@@ -166,6 +166,70 @@ void DisplayManager::showOTAScreen(const char* message) {
     display.sendBuffer();
 }
 
+void DisplayManager::showOTAProgress(unsigned int progress, unsigned int total) {
+    if (!initialized) return;
+    
+    display.clearBuffer();
+    
+    // Title
+    display.setFont(u8g2_font_9x15_tr);
+    display.drawStr(15, 15, "OTA Update");
+    
+    // Calculate percentage
+    uint8_t percentage = (progress * 100) / total;
+    
+    // Show percentage
+    display.setFont(u8g2_font_9x15_tr);
+    char percentStr[8];
+    snprintf(percentStr, sizeof(percentStr), "%d%%", percentage);
+    // Center the percentage text
+    int textWidth = strlen(percentStr) * 9;
+    display.drawStr((128 - textWidth) / 2, 35, percentStr);
+    
+    // Progress bar
+    display.drawFrame(10, 42, 108, 12);
+    int barWidth = (percentage * 104) / 100;
+    if (barWidth > 0) {
+        display.drawBox(12, 44, barWidth, 8);
+    }
+    
+    // Status text
+    display.setFont(u8g2_font_6x10_tr);
+    display.drawStr(5, 63, "Downloading...");
+    
+    display.sendBuffer();
+}
+
+void DisplayManager::showOTAComplete() {
+    if (!initialized) return;
+    
+    display.clearBuffer();
+    
+    display.setFont(u8g2_font_9x15_tr);
+    display.drawStr(15, 20, "OTA Update");
+    display.drawStr(20, 36, "Complete!");
+    
+    display.setFont(u8g2_font_6x10_tr);
+    display.drawStr(20, 55, "Rebooting...");
+    
+    display.sendBuffer();
+}
+
+void DisplayManager::showOTAError(const char* error) {
+    if (!initialized) return;
+    
+    display.clearBuffer();
+    
+    display.setFont(u8g2_font_9x15_tr);
+    display.drawStr(15, 15, "OTA Error");
+    
+    display.setFont(u8g2_font_6x10_tr);
+    // Wrap error message if too long
+    display.drawStr(5, 35, error);
+    
+    display.sendBuffer();
+}
+
 void DisplayManager::showSleepScreen(int seconds) {
     if (!initialized) return;
     

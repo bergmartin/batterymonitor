@@ -37,6 +37,9 @@ public:
     void showWiFiInfo(bool connected, int8_t rssi);
     void showBootScreen(int bootCount);
     void showOTAScreen(const char* message);
+    void showOTAProgress(unsigned int progress, unsigned int total);
+    void showOTAComplete();
+    void showOTAError(const char* error);
     void showSleepScreen(int seconds);
     
     // Clear display
