@@ -32,7 +32,7 @@ public:
     void setResetCallback(std::function<void()> callback);
     bool connectWiFi();
     bool connectMQTT();
-    void publishReading(const BatteryReading& reading, int bootCount);
+    void publishReading(const BatteryReading& reading, int bootCount, time_t nextReadingTime = 0);
     void loop();
     void disconnect();
 };

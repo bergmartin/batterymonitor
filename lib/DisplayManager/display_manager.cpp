@@ -230,10 +230,14 @@ void DisplayManager::showOTAError(const char* error) {
     display.sendBuffer();
 }
 
-void DisplayManager::showSleepScreen(const char* wakeupTime, const BatteryReading& reading) {
+void DisplayManager::showSleepScreen(time_t wakeupTime, const BatteryReading& reading) {
     if (!initialized) return;
     
     display.clearBuffer();
+ 
+    display.setFont(u8g2_font_8x13_tr);
+    display.drawStr(5, 15, "Deep Sleep");
+ 
     // Last battery reading info
     display.setFont(u8g2_font_6x10_tr);
     char voltageStr[16];
@@ -244,14 +248,16 @@ void DisplayManager::showSleepScreen(const char* wakeupTime, const BatteryReadin
     snprintf(percentStr, sizeof(percentStr), "%.0f%%", reading.percentage);
     display.drawStr(70, 25, percentStr);
 
-    display.setFont(u8g2_font_9x15_tr);
-    display.drawStr(5, 15, "Deep Sleep");
-    
     display.setFont(u8g2_font_6x10_tr);
     display.drawStr(5, 35, "Wake at:");
     
-    display.setFont(u8g2_font_7x13_tr);
-    display.drawStr(5, 50, wakeupTime);
+    // Format time as mm-dd hh:mm in local timezone
+    struct tm* timeinfo = localtime(&wakeupTime);
+    char timeStr[20];
+    strftime(timeStr, sizeof(timeStr), "%m-%d %H:%M", timeinfo);
+    
+    display.setFont(u8g2_font_6x10_tr);
+    display.drawStr(5, 50, timeStr);
     
     display.sendBuffer();
 }
