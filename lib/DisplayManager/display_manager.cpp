@@ -230,11 +230,20 @@ void DisplayManager::showOTAError(const char* error) {
     display.sendBuffer();
 }
 
-void DisplayManager::showSleepScreen(const char* wakeupTime) {
+void DisplayManager::showSleepScreen(const char* wakeupTime, const BatteryReading& reading) {
     if (!initialized) return;
     
     display.clearBuffer();
-    
+    // Last battery reading info
+    display.setFont(u8g2_font_6x10_tr);
+    char voltageStr[16];
+    snprintf(voltageStr, sizeof(voltageStr), "%.2fV", reading.voltage);
+    display.drawStr(70, 15, voltageStr);
+
+    char percentStr[16];
+    snprintf(percentStr, sizeof(percentStr), "%.0f%%", reading.percentage);
+    display.drawStr(70, 25, percentStr);
+
     display.setFont(u8g2_font_9x15_tr);
     display.drawStr(5, 15, "Deep Sleep");
     

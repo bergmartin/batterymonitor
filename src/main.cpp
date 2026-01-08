@@ -99,7 +99,7 @@ void enterDeepSleep()
   
   // Show sleep screen on display
   if (display.isReady()) {
-    display.showSleepScreen(wakeupISO);
+    display.showSleepScreen(wakeupISO, monitor.readBattery());
     delay(2000); // Show sleep screen for 2 seconds
   }
   

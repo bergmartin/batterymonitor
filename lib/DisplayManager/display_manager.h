@@ -40,7 +40,7 @@ public:
     void showOTAProgress(unsigned int progress, unsigned int total);
     void showOTAComplete();
     void showOTAError(const char* error);
-    void showSleepScreen(const char* wakeupTime);
+    void showSleepScreen(const char* wakeupTime, const BatteryReading& reading);
     
     // Clear display
     void clear();
