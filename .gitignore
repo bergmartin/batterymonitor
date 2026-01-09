@@ -3,6 +3,7 @@
 # Credentials (NEVER commit these!)
 include/wifi_credentials.h
 include/mqtt_credentials.h
+secret/
 
 # STL files (generated from OpenSCAD)
 **/*.stl
