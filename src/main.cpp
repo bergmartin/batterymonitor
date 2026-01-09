@@ -21,6 +21,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include "battery_monitor.h"
 #include "esp_sleep.h"
@@ -41,7 +42,7 @@ RTC_DATA_ATTR float lastVoltage = 0.0;
 
 // Global objects
 BatteryMonitor monitor;
-WiFiClient wifiClient;
+WiFiClientSecure wifiClient;
 PubSubClient mqttClient(wifiClient);
 ConfigManager config; // Manages credentials in NVS (persists across OTA updates)
 NetworkManager network(wifiClient, mqttClient, config);

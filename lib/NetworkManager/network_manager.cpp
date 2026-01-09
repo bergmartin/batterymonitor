@@ -1,7 +1,8 @@
 #include "network_manager.h"
 #include <time.h>
+#include "../../include/mqtt_credentials.h"
 
-NetworkManager::NetworkManager(WiFiClient& wifi, PubSubClient& mqtt, ConfigManager& cfg)
+NetworkManager::NetworkManager(WiFiClientSecure& wifi, PubSubClient& mqtt, ConfigManager& cfg)
     : wifiClient(wifi), mqttClient(mqtt), config(cfg), 
       wifiConnected(false), mqttConnected(false) {
     mqttClient.setCallback([this](char* topic, byte* payload, unsigned int length) {
@@ -80,6 +81,11 @@ bool NetworkManager::connectWiFi() {
 bool NetworkManager::connectMQTT() {
     Serial.print("Connecting to MQTT broker: ");
     Serial.println(config.mqttServer);
+    
+    // Configure SSL/TLS for secure MQTT connection
+    wifiClient.setCACert(MQTT_CA_CERT);
+    Serial.println("SSL/TLS enabled with certificate validation");
+    
     mqttClient.setServer(config.mqttServer.c_str(), config.mqttPort);
     
     // Increase buffer size for discovery messages (default 256 may be too small)
