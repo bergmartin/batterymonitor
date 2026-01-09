@@ -49,6 +49,8 @@ jobs:
     needs: [validate-branch]
     # Run if validation passed OR if this is a nightly build
     if: always() && (needs.validate-branch.result == 'success' || needs.validate-branch.result == 'skipped')
+    # Use PROD environment for tagged releases (enables environment protection rules & secrets)
+    environment: ${{ startsWith(github.ref, 'refs/tags/') && 'PROD' || '' }}
     
     steps:
       - name: Checkout code
@@ -146,7 +148,7 @@ jobs:
             echo "tag=$TAG" >> $GITHUB_OUTPUT
             echo "is_release=true" >> $GITHUB_OUTPUT
             echo "environment=esp32dev_prod" >> $GITHUB_OUTPUT
-            echo "Building release version: $VERSION (PROD)"
+            echo "🏭 Building PRODUCTION release version: $VERSION"
           else
             # Nightly build - use date and short commit
             VERSION="nightly-$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
@@ -154,7 +156,7 @@ jobs:
             echo "tag=nightly" >> $GITHUB_OUTPUT
             echo "is_release=false" >> $GITHUB_OUTPUT
             echo "environment=esp32dev" >> $GITHUB_OUTPUT
-            echo "Building nightly version: $VERSION (DEV)"
+            echo "🔧 Building development nightly version: $VERSION"
           fi
       
       - name: Build firmware
@@ -198,9 +200,11 @@ jobs:
             
             ### 🏭 Production Environment
             This is a **production build** with:
+            - Built using GitHub Environment: `PROD`
             - Minimal debug logging (CORE_DEBUG_LEVEL=1)
             - Optimized for stability and battery life
             - Production flag enabled for conditional code paths
+            - Environment-specific secrets and protection rules applied
             
             ### ✅ Automatic OTA Updates
             This firmware includes automatic update checking! The device will:
@@ -262,6 +266,8 @@ jobs:
     needs: [build]
     # Only trigger OTA for tag releases, not nightly builds
     if: startsWith(github.ref, 'refs/tags/')
+    # Use PROD environment for OTA trigger (can use environment-specific MQTT credentials)
+    environment: PROD
     
     steps:
       - name: Trigger OTA Update via MQTT
@@ -275,12 +281,14 @@ jobs:
         run: |
           if [ -z "$MQTT_SERVER" ]; then
             echo "⚠️  OTA_MQTT_SERVER secret not set - skipping OTA trigger"
-            echo "To enable automatic OTA deployment, set the following secrets:"
+            echo "To enable automatic OTA deployment, set the following secrets in the PROD environment:"
             echo "  - OTA_MQTT_SERVER"
             echo "  - OTA_MQTT_PORT (default: 8883)"
             echo "  - OTA_MQTT_USER"
             echo "  - OTA_MQTT_PASSWORD"
             echo "  - OTA_MQTT_TOPIC (optional, default: battery/monitor/ota)"
+            echo ""
+            echo "Configure at: https://github.com/${{ github.repository }}/settings/environments"
             exit 0
           fi
           
@@ -291,7 +299,7 @@ jobs:
           # Construct firmware URL (production build for releases)
           FIRMWARE_URL="https://github.com/${GITHUB_REPO}/releases/download/${{ github.ref_name }}/firmware-prod.bin"
           
-          echo "Publishing OTA trigger to MQTT broker..."
+          echo "📡 Publishing OTA trigger to MQTT broker (PROD environment)..."
           echo "  Server: $MQTT_SERVER:${MQTT_PORT:-8883}"
           echo "  Topic: $MQTT_TOPIC"
           echo "  URL: $FIRMWARE_URL"
