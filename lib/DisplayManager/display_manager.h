@@ -33,8 +33,6 @@ public:
     void update(const BatteryReading& reading, bool wifiConnected, int8_t rssi);
     
     // Display individual screens
-    void showBatteryInfo(const BatteryReading& reading);
-    void showWiFiInfo(bool connected, int8_t rssi);
     void showBootScreen(int bootCount);
     void showOTAScreen(const char* message);
     void showOTAProgress(unsigned int progress, unsigned int total);
@@ -56,7 +54,6 @@ private:
     // Helper functions
     void drawBatteryIcon(uint8_t x, uint8_t y, float percentage);
     void drawWiFiIcon(uint8_t x, uint8_t y, int8_t rssi);
-    const char* getBatteryStatusIcon(BatteryStatus status);
     int8_t getWiFiSignalBars(int8_t rssi);
 };
 
