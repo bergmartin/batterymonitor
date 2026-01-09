@@ -83,13 +83,8 @@ bool NetworkManager::connectMQTT() {
     Serial.println(config.mqttServer);
     
     // Configure SSL/TLS for secure MQTT connection
-    #ifdef MQTT_CA_CERT
-        wifiClient.setCACert(MQTT_CA_CERT);
-        Serial.println("SSL/TLS enabled with certificate validation");
-    #else
-        wifiClient.setInsecure();
-        Serial.println("SSL/TLS enabled (insecure mode - no certificate validation)");
-    #endif
+    wifiClient.setCACert(MQTT_CA_CERT);
+    Serial.println("SSL/TLS enabled with certificate validation");
     
     mqttClient.setServer(config.mqttServer.c_str(), config.mqttPort);
     
