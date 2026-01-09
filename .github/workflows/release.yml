@@ -229,7 +229,7 @@ jobs:
             Force an immediate update by publishing to MQTT:
             ```bash
             mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" \
-              -m "https://github.com/USERNAME/REPO/releases/download/${{ github.ref_name }}/firmware-prod.bin"
+              -m "${{ github.ref_name }}/firmware-prod.bin"
             ```
             
             ### First Time Setup (USB)
@@ -297,7 +297,7 @@ jobs:
           sudo apt-get install -y mosquitto-clients
           
           # Construct firmware URL (production build for releases)
-          FIRMWARE_URL="https://github.com/${GITHUB_REPO}/releases/download/${{ github.ref_name }}/firmware-prod.bin"
+          FIRMWARE_URL="${{ github.ref_name }}/firmware-prod.bin"
           
           echo "📡 Publishing OTA trigger to MQTT broker (PROD environment)..."
           echo "  Server: $MQTT_SERVER:${MQTT_PORT:-8883}"
