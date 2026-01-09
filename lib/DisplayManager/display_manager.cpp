@@ -86,55 +86,6 @@ void DisplayManager::update(const BatteryReading& reading, bool wifiConnected, i
     display.sendBuffer();
 }
 
-void DisplayManager::showBatteryInfo(const BatteryReading& reading) {
-    if (!initialized) return;
-    
-    display.clearBuffer();
-    
-    display.setFont(u8g2_font_9x15_tr);
-    display.drawStr(15, 15, "Battery Info");
-    
-    char buffer[32];
-    display.setFont(u8g2_font_7x13_tr);
-    
-    snprintf(buffer, sizeof(buffer), "Voltage: %.2fV", reading.voltage);
-    display.drawStr(5, 32, buffer);
-    
-    snprintf(buffer, sizeof(buffer), "Level: %.1f%%", reading.percentage);
-    display.drawStr(5, 46, buffer);
-    
-    snprintf(buffer, sizeof(buffer), "Status: %s", BatteryMonitor::statusToString(reading.status));
-    display.drawStr(5, 60, buffer);
-    
-    display.sendBuffer();
-}
-
-void DisplayManager::showWiFiInfo(bool connected, int8_t rssi) {
-    if (!initialized) return;
-    
-    display.clearBuffer();
-    
-    display.setFont(u8g2_font_9x15_tr);
-    display.drawStr(20, 15, "WiFi Status");
-    
-    display.setFont(u8g2_font_7x13_tr);
-    
-    if (connected) {
-        display.drawStr(5, 35, "Connected");
-        
-        char buffer[32];
-        snprintf(buffer, sizeof(buffer), "Signal: %ddBm", rssi);
-        display.drawStr(5, 50, buffer);
-        
-        // Draw signal bars
-        drawWiFiIcon(50, 55, rssi);
-    } else {
-        display.drawStr(5, 40, "Disconnected");
-    }
-    
-    display.sendBuffer();
-}
-
 void DisplayManager::showBootScreen(int bootCount) {
     if (!initialized) return;
     
@@ -230,19 +181,55 @@ void DisplayManager::showOTAError(const char* error) {
     display.sendBuffer();
 }
 
-void DisplayManager::showSleepScreen(const char* wakeupTime) {
+void DisplayManager::showSleepScreen(time_t wakeupTime, const BatteryReading& reading) {
     if (!initialized) return;
     
     display.clearBuffer();
+ 
+    // Last battery reading info
+
+    // Title bar
+    display.setFont(u8g2_font_5x7_tr);
+    display.drawStr(0, 7, "Battery Monitor sleepytime");
+    display.drawHLine(0, 9, 128);
     
+    // Battery section
     display.setFont(u8g2_font_9x15_tr);
-    display.drawStr(5, 15, "Deep Sleep");
     
+    // Voltage - large font
+    char voltageStr[16];
+    snprintf(voltageStr, sizeof(voltageStr), "%.2fV", reading.voltage);
+    display.drawStr(5, 28, voltageStr);
+    
+    // Battery icon
+    drawBatteryIcon(100, 15, reading.percentage);
+    
+    // Percentage bar
     display.setFont(u8g2_font_6x10_tr);
-    display.drawStr(5, 35, "Wake at:");
+    char percentStr[8];
+    snprintf(percentStr, sizeof(percentStr), "%.0f%%", reading.percentage);
+    display.drawStr(5, 42, percentStr);
     
-    display.setFont(u8g2_font_7x13_tr);
-    display.drawStr(5, 50, wakeupTime);
+    // Status
+    display.drawStr(45, 42, BatteryMonitor::statusToString(reading.status));
+    
+    // Progress bar for percentage
+    display.drawFrame(5, 46, 118, 8);
+    int barWidth = (int)((reading.percentage / 100.0) * 114);
+    if (barWidth > 0) {
+        display.drawBox(7, 48, barWidth, 4);
+    }
+
+    // Format time as hh:mm in local timezone
+    struct tm* timeinfo = localtime(&wakeupTime);
+    char timeStr[20];
+    strftime(timeStr, sizeof(timeStr), "%H:%M", timeinfo);
+    
+    display.setFont(u8g2_font_5x7_tr);
+
+    char nextReadingStr[25];
+    snprintf(nextReadingStr, sizeof(nextReadingStr), "Next reading at %s", timeStr);
+    display.drawStr(5, 63, nextReadingStr);
     
     display.sendBuffer();
 }
@@ -276,17 +263,6 @@ void DisplayManager::drawWiFiIcon(uint8_t x, uint8_t y, int8_t rssi) {
             int height = (i + 1) * 2;
             display.drawFrame(x + (i * 4), y + 8 - height, 3, height);
         }
-    }
-}
-
-const char* DisplayManager::getBatteryStatusIcon(BatteryStatus status) {
-    switch (status) {
-        case BatteryStatus::FULL:     return "█";
-        case BatteryStatus::GOOD:     return "▓";
-        case BatteryStatus::LOW_BATTERY: return "▒";
-        case BatteryStatus::CRITICAL: return "░";
-        case BatteryStatus::DEAD:     return "○";
-        default:                      return "?";
     }
 }
 

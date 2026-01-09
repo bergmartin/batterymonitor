@@ -52,9 +52,19 @@ bool NetworkManager::connectWiFi() {
         Serial.print("IP Address: ");
         Serial.println(WiFi.localIP());
         
-        // Configure NTP time sync
+        // Configure timezone and NTP time sync
+        // Set timezone to EST (Eastern Standard Time) - adjust based on your location
+        // Format: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+        // Examples: 
+        // - "CET-1CEST,M3.5.0,M10.5.0/3" for Europe/Berlin
+        // - "EST5EDT,M3.2.0,M11.1.0" for America/New_York
+        // - "PST8PDT,M3.2.0,M11.1.0" for America/Los_Angeles
+        // - "UTC0" for UTC
+        setenv("TZ", "EST5EDT,M3.2.0,M11.1.0", 1);
+        tzset();
+        
         configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-        Serial.println("NTP time sync started");
+        Serial.println("NTP time sync started with timezone: EST");
         
         wifiConnected = true;
         return true;
@@ -131,7 +141,7 @@ bool NetworkManager::connectMQTT() {
     return false;
 }
 
-void NetworkManager::publishReading(const BatteryReading& reading, int bootCount) {
+void NetworkManager::publishReading(const BatteryReading& reading, int bootCount, time_t nextReadingTime) {
     if (!mqttClient.connected()) {
         Serial.println("MQTT not connected, skipping publish");
         return;
@@ -217,6 +227,19 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
         snprintf(value, sizeof(value), "%lu", millis() / 1000);
         if (!mqttClient.publish(topic, value, true)) {
             Serial.printf("❌ Failed to publish last updated time (no NTP) - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+        }
+    }
+    
+    // Next reading time (ISO 8601 timestamp)
+    if (nextReadingTime > 0) {
+        snprintf(topic, sizeof(topic), "%s_next_reading/state", hostname);
+        struct tm nextTimeinfo;
+        localtime_r(&nextReadingTime, &nextTimeinfo);
+        char nextTimestamp[30];
+        strftime(nextTimestamp, sizeof(nextTimestamp), "%Y-%m-%d %H:%M:%S", &nextTimeinfo);
+        if (!mqttClient.publish(topic, nextTimestamp, true)) {
+            Serial.printf("❌ Failed to publish next reading time - State: %d, Buffer: %d bytes\n", 
                       mqttClient.state(), mqttClient.getBufferSize());
         }
     }

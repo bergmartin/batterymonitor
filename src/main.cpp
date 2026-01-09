@@ -78,6 +78,10 @@ void printWakeupReason()
 
 void enterDeepSleep()
 {
+  // Ensure timezone is set (in case WiFi didn't connect)
+  setenv("TZ", "EST5EDT,M3.2.0,M11.1.0", 1);
+  tzset();
+  
   // Calculate next wakeup time
   time_t now;
   time(&now);
@@ -99,7 +103,7 @@ void enterDeepSleep()
   
   // Show sleep screen on display
   if (display.isReady()) {
-    display.showSleepScreen(wakeupISO);
+    display.showSleepScreen(wakeupTime, monitor.readBattery());
     delay(2000); // Show sleep screen for 2 seconds
   }
   
@@ -271,7 +275,12 @@ void loop()
 
     if (network.connectMQTT())
     {
-      network.publishReading(reading, bootCount);
+      // Calculate next reading time for MQTT publishing
+      time_t now;
+      time(&now);
+      time_t nextReading = now + (Config::DEEP_SLEEP_INTERVAL_US / 1000000);
+      
+      network.publishReading(reading, bootCount, nextReading);
 
       // Process MQTT messages for a few seconds to check for OTA trigger
       Serial.println("Checking for MQTT commands...");
