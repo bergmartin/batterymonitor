@@ -1,4 +1,4 @@
-name: Build and Release Firmware
+name: Release Firmware
 
 on:
   push:
@@ -49,6 +49,8 @@ jobs:
     needs: [validate-branch]
     # Run if validation passed OR if this is a nightly build
     if: always() && (needs.validate-branch.result == 'success' || needs.validate-branch.result == 'skipped')
+    # Use PROD environment for tagged releases (enables environment protection rules & secrets)
+    environment: ${{ startsWith(github.ref, 'refs/tags/') && 'PROD' || '' }}
     
     steps:
       - name: Checkout code
@@ -145,24 +147,30 @@ jobs:
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "tag=$TAG" >> $GITHUB_OUTPUT
             echo "is_release=true" >> $GITHUB_OUTPUT
-            echo "Building release version: $VERSION"
+            echo "environment=esp32dev_prod" >> $GITHUB_OUTPUT
+            echo "🏭 Building PRODUCTION release version: $VERSION"
           else
             # Nightly build - use date and short commit
             VERSION="nightly-$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "tag=nightly" >> $GITHUB_OUTPUT
             echo "is_release=false" >> $GITHUB_OUTPUT
-            echo "Building nightly version: $VERSION"
+            echo "environment=esp32dev" >> $GITHUB_OUTPUT
+            echo "🔧 Building development nightly version: $VERSION"
           fi
       
       - name: Build firmware
-        run: pio run -e esp32dev
+        run: pio run -e ${{ steps.version.outputs.environment }}
         env:
           PLATFORMIO_BUILD_FLAGS: -D FIRMWARE_VERSION=\"${{ steps.version.outputs.version }}\"
       
       - name: Rename firmware files
         run: |
-          cp .pio/build/esp32dev/firmware.bin firmware.bin
+          ENV_SUFFIX=""
+          if [ "${{ steps.version.outputs.environment }}" = "esp32dev_prod" ]; then
+            ENV_SUFFIX="-prod"
+          fi
+          cp .pio/build/${{ steps.version.outputs.environment }}/firmware.bin firmware${ENV_SUFFIX}.bin
       
       - name: Generate checksums
         run: |
@@ -185,10 +193,18 @@ jobs:
         with:
           token: ${{ github.token }}
           files: |
-            firmware.bin
+            firmware-prod.bin
             checksums.txt
           body: |
-            ## Battery Monitor Firmware ${{ github.ref_name }}
+            ## Battery Monitor Firmware ${{ github.ref_name }} (Production Build)
+            
+            ### 🏭 Production Environment
+            This is a **production build** with:
+            - Built using GitHub Environment: `PROD`
+            - Minimal debug logging (CORE_DEBUG_LEVEL=1)
+            - Optimized for stability and battery life
+            - Production flag enabled for conditional code paths
+            - Environment-specific secrets and protection rules applied
             
             ### ✅ Automatic OTA Updates
             This firmware includes automatic update checking! The device will:
@@ -198,11 +214,11 @@ jobs:
             
             ### Firmware Files
             
-            **Simple filenames (version in URL path):**
-            - `firmware.bin` 
+            **Production firmware:**
+            - `firmware-prod.bin` 
             
             **Download URL structure:**
-            - `https://github.com/USERNAME/REPO/releases/download/${{ github.ref_name }}/firmware.bin`
+            - `https://github.com/USERNAME/REPO/releases/download/${{ github.ref_name }}/firmware-prod.bin`
             
             ### Setup Auto-Update
             1. Set target version via serial: `otaver ${{ steps.version.outputs.version }}`
@@ -213,7 +229,7 @@ jobs:
             Force an immediate update by publishing to MQTT:
             ```bash
             mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" \
-              -m "https://github.com/USERNAME/REPO/releases/download/${{ github.ref_name }}/firmware.bin"
+              -m "https://github.com/USERNAME/REPO/releases/download/${{ github.ref_name }}/firmware-prod.bin"
             ```
             
             ### First Time Setup (USB)
@@ -250,6 +266,8 @@ jobs:
     needs: [build]
     # Only trigger OTA for tag releases, not nightly builds
     if: startsWith(github.ref, 'refs/tags/')
+    # Use PROD environment for OTA trigger (can use environment-specific MQTT credentials)
+    environment: PROD
     
     steps:
       - name: Trigger OTA Update via MQTT
@@ -263,12 +281,14 @@ jobs:
         run: |
           if [ -z "$MQTT_SERVER" ]; then
             echo "⚠️  OTA_MQTT_SERVER secret not set - skipping OTA trigger"
-            echo "To enable automatic OTA deployment, set the following secrets:"
+            echo "To enable automatic OTA deployment, set the following secrets in the PROD environment:"
             echo "  - OTA_MQTT_SERVER"
             echo "  - OTA_MQTT_PORT (default: 8883)"
             echo "  - OTA_MQTT_USER"
             echo "  - OTA_MQTT_PASSWORD"
             echo "  - OTA_MQTT_TOPIC (optional, default: battery/monitor/ota)"
+            echo ""
+            echo "Configure at: https://github.com/${{ github.repository }}/settings/environments"
             exit 0
           fi
           
@@ -276,10 +296,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mosquitto-clients
           
-          # Construct firmware URL
-          FIRMWARE_URL="https://github.com/${GITHUB_REPO}/releases/download/${{ github.ref_name }}/firmware.bin"
+          # Construct firmware URL (production build for releases)
+          FIRMWARE_URL="https://github.com/${GITHUB_REPO}/releases/download/${{ github.ref_name }}/firmware-prod.bin"
           
-          echo "Publishing OTA trigger to MQTT broker..."
+          echo "📡 Publishing OTA trigger to MQTT broker (PROD environment)..."
           echo "  Server: $MQTT_SERVER:${MQTT_PORT:-8883}"
           echo "  Topic: $MQTT_TOPIC"
           echo "  URL: $FIRMWARE_URL"
