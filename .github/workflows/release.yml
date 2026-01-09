@@ -1,4 +1,4 @@
-name: Build and Release Firmware
+name: Release Firmware
 
 on:
   push:
