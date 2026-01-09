@@ -2,8 +2,12 @@ name: Build and Release Firmware
 
 on:
   push:
+    branches:
+      - '**'  # Build on all branch pushes
     tags:
-      - 'v*'
+      - 'v*'  # Release on tag pushes
+  workflow_dispatch:
+    # Allow manual trigger
 
 permissions:
   contents: write
@@ -12,34 +16,39 @@ jobs:
   validate-branch:
     runs-on: ubuntu-latest
     name: Validate release branch
+    # Only run validation for tag pushes, not nightly builds
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for branch detection
       
-      - name: Check major version release from main branch
+      - name: Check tag is on main branch
         run: |
           TAG=${{ github.ref_name }}
-          BRANCH=${{ github.ref }}
           
-          # Extract version from tag (v1.2.3 -> 1.2.3)
-          VERSION=${TAG#v}
+          # Get the commit hash of the tag
+          TAG_COMMIT=$(git rev-parse $TAG^{commit})
           
-          # Check if this is a major version release (X.0.0)
-          if [[ $VERSION =~ ^[0-9]+\.0\.0$ ]]; then
-            # Major version release must be from main branch
-            if [[ ! "$BRANCH" =~ ^refs/heads/main$ ]]; then
-              echo "❌ Error: Major version releases (v*.0.0) can only be tagged from the main branch"
-              echo "Current branch: $BRANCH"
-              exit 1
-            fi
-            echo "✓ Major version $VERSION correctly tagged from main branch"
+          # Get the commit hash of main branch
+          MAIN_COMMIT=$(git rev-parse origin/main)
+          
+          # Check if tag commit is reachable from main
+          if git merge-base --is-ancestor $TAG_COMMIT origin/main; then
+            echo "✓ Tag $TAG is on main branch"
           else
-            echo "✓ Non-major version release: $VERSION"
+            echo "❌ Error: Tags can only be created on the main branch"
+            echo "Tag commit: $TAG_COMMIT"
+            echo "Main commit: $MAIN_COMMIT"
+            exit 1
           fi
 
   build:
     runs-on: ubuntu-latest
-    needs: validate-branch
+    needs: [validate-branch]
+    # Run if validation passed OR if this is a nightly build
+    if: always() && (needs.validate-branch.result == 'success' || needs.validate-branch.result == 'skipped')
     
     steps:
       - name: Checkout code
@@ -67,15 +76,55 @@ jobs:
       
       - name: Create credential files
         run: |
-          # Credentials are now stored in NVS (Non-Volatile Storage) on the ESP32
-          # These values are only used as DEFAULTS on the very first boot
-          # After first boot, credentials persist in NVS across all OTA updates
+          # Create mqtt_credentials.h with CA certificate
+          cat > include/mqtt_credentials.h << 'EOF'
+          #ifndef MQTT_CREDENTIALS_H
+          #define MQTT_CREDENTIALS_H
           
-          # Option A: Placeholder defaults (recommended for public repos)
-          # Each device will use these defaults on first boot only
-          # Configure actual credentials via USB on first upload
+          #define MQTT_SERVER "mqtt.example.com"
+          #define MQTT_PORT 8883
+          #define MQTT_USER "mqtt-user"
+          #define MQTT_PASSWORD "mqtt-password"
+          #define MQTT_CLIENT_ID "battery-monitor"
           
-          # Create wifi_credentials.h (with placeholder default values)
+          // MQTT SSL/TLS CA Certificate (ISRG Root X1 for Let's Encrypt)
+          static const char* MQTT_CA_CERT = 
+          "-----BEGIN CERTIFICATE-----\n"
+          "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\n"
+          "-----END CERTIFICATE-----\n";
+          
+          #endif
+          EOF
+          
+          # Create wifi_credentials.h
           cat > include/wifi_credentials.h << 'EOF'
           #ifndef WIFI_CREDENTIALS_H
           #define WIFI_CREDENTIALS_H
@@ -85,56 +134,26 @@ jobs:
           
           #endif
           EOF
-          
-          # Create mqtt_credentials.h (with placeholder default values)
-          cat > include/mqtt_credentials.h << 'EOF'
-          #ifndef MQTT_CREDENTIALS_H
-          #define MQTT_CREDENTIALS_H
-          
-          #define MQTT_SERVER "mqtt.example.com"
-          #define MQTT_PORT 1883
-          #define MQTT_USER "mqtt-user"
-          #define MQTT_PASSWORD "mqtt-password"
-          #define MQTT_CLIENT_ID "battery-monitor"
-          
-          #endif
-          EOF
-          
-          # Option B: Use GitHub Secrets as defaults (uncomment to use)
-          # Set these secrets in GitHub: Settings -> Secrets and variables -> Actions
-          # These become the default values on first boot for all devices
-          
-          # cat > include/wifi_credentials.h << EOF
-          # #ifndef WIFI_CREDENTIALS_H
-          # #define WIFI_CREDENTIALS_H
-          # 
-          # #define WIFI_SSID "${{ secrets.WIFI_SSID }}"
-          # #define WIFI_PASSWORD "${{ secrets.WIFI_PASSWORD }}"
-          # 
-          # #endif
-          # EOF
-          # 
-          # cat > include/mqtt_credentials.h << EOF
-          # #ifndef MQTT_CREDENTIALS_H
-          # #define MQTT_CREDENTIALS_H
-          # 
-          # #define MQTT_SERVER "${{ secrets.MQTT_SERVER }}"
-          # #define MQTT_PORT ${{ secrets.MQTT_PORT }}
-          # #define MQTT_USER "${{ secrets.MQTT_USER }}"
-          # #define MQTT_PASSWORD "${{ secrets.MQTT_PASSWORD }}"
-          # #define MQTT_CLIENT_ID "${{ secrets.MQTT_CLIENT_ID }}"
-          # 
-          # #endif
-          # EOF
       
-      - name: Extract version from tag
+      - name: Determine version
         id: version
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG#v}  # Remove 'v' prefix if present
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Building version: $VERSION"
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Tag build - use tag as version
+            TAG=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG#v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "is_release=true" >> $GITHUB_OUTPUT
+            echo "Building release version: $VERSION"
+          else
+            # Nightly build - use date and short commit
+            VERSION="nightly-$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=nightly" >> $GITHUB_OUTPUT
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "Building nightly version: $VERSION"
+          fi
       
       - name: Build firmware
         run: pio run -e esp32dev
@@ -143,7 +162,6 @@ jobs:
       
       - name: Rename firmware files
         run: |
-          # Simple filenames without version - version is in the release URL path
           cp .pio/build/esp32dev/firmware.bin firmware.bin
       
       - name: Generate checksums
@@ -151,7 +169,18 @@ jobs:
           sha256sum firmware*.bin > checksums.txt
           cat checksums.txt
       
-      - name: Create Release
+      - name: Upload artifacts (nightly builds)
+        if: steps.version.outputs.is_release == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ steps.version.outputs.version }}
+          path: |
+            firmware.bin
+            checksums.txt
+          retention-days: 30
+      
+      - name: Create Release (tagged versions)
+        if: steps.version.outputs.is_release == 'true'
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ github.token }}
@@ -183,7 +212,8 @@ jobs:
             ### Manual OTA Update via MQTT
             Force an immediate update by publishing to MQTT:
             ```bash
-            mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" -m "${{ github.ref_name }}/firmware.bin"
+            mosquitto_pub -h YOUR_BROKER -t "battery/monitor/ota" \
+              -m "https://github.com/USERNAME/REPO/releases/download/${{ github.ref_name }}/firmware.bin"
             ```
             
             ### First Time Setup (USB)
@@ -207,7 +237,6 @@ jobs:
             ### How It Works
             - Set target version using `otaver` command via serial
             - Device compares with built-in `FIRMWARE_VERSION` on wake
-            - Constructs URL: `BASE_URL/v{target}/firmware-{type}.bin`
             - Downloads and installs if newer version available
             - Credentials persist in NVS across all updates ✓
             
@@ -215,3 +244,57 @@ jobs:
             See `checksums.txt` for SHA256 checksums of all binaries.
           draft: false
           prerelease: false
+  
+  trigger-ota:
+    runs-on: ubuntu-latest
+    needs: [build]
+    # Only trigger OTA for tag releases, not nightly builds
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Trigger OTA Update via MQTT
+        env:
+          MQTT_SERVER: ${{ secrets.OTA_MQTT_SERVER }}
+          MQTT_PORT: ${{ secrets.OTA_MQTT_PORT }}
+          MQTT_USER: ${{ secrets.OTA_MQTT_USER }}
+          MQTT_PASSWORD: ${{ secrets.OTA_MQTT_PASSWORD }}
+          MQTT_TOPIC: ${{ secrets.OTA_MQTT_TOPIC || 'battery/monitor/ota' }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$MQTT_SERVER" ]; then
+            echo "⚠️  OTA_MQTT_SERVER secret not set - skipping OTA trigger"
+            echo "To enable automatic OTA deployment, set the following secrets:"
+            echo "  - OTA_MQTT_SERVER"
+            echo "  - OTA_MQTT_PORT (default: 8883)"
+            echo "  - OTA_MQTT_USER"
+            echo "  - OTA_MQTT_PASSWORD"
+            echo "  - OTA_MQTT_TOPIC (optional, default: battery/monitor/ota)"
+            exit 0
+          fi
+          
+          # Install mosquitto clients
+          sudo apt-get update
+          sudo apt-get install -y mosquitto-clients
+          
+          # Construct firmware URL
+          FIRMWARE_URL="https://github.com/${GITHUB_REPO}/releases/download/${{ github.ref_name }}/firmware.bin"
+          
+          echo "Publishing OTA trigger to MQTT broker..."
+          echo "  Server: $MQTT_SERVER:${MQTT_PORT:-8883}"
+          echo "  Topic: $MQTT_TOPIC"
+          echo "  URL: $FIRMWARE_URL"
+          
+          # Publish OTA update URL to MQTT
+          mosquitto_pub \
+            -h "$MQTT_SERVER" \
+            -p "${MQTT_PORT:-8883}" \
+            -u "$MQTT_USER" \
+            -P "$MQTT_PASSWORD" \
+            --capath /etc/ssl/certs \
+            -t "$MQTT_TOPIC" \
+            -m "$FIRMWARE_URL" \
+            -q 1 \
+            -r
+          
+          echo "✓ OTA trigger published successfully!"
+          echo "Devices subscribed to '$MQTT_TOPIC' will download and install the update."
