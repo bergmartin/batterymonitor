@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <functional>
 #include "battery_monitor.h"
@@ -11,7 +12,7 @@
 
 class NetworkManager {
 private:
-    WiFiClient& wifiClient;
+    WiFiClientSecure& wifiClient;
     PubSubClient& mqttClient;
     ConfigManager& config;
     
@@ -26,7 +27,7 @@ public:
     bool wifiConnected;
     bool mqttConnected;
     
-    NetworkManager(WiFiClient& wifi, PubSubClient& mqtt, ConfigManager& cfg);
+    NetworkManager(WiFiClientSecure& wifi, PubSubClient& mqtt, ConfigManager& cfg);
     
     void setOTACallback(std::function<void(const String&)> callback);
     void setResetCallback(std::function<void()> callback);
