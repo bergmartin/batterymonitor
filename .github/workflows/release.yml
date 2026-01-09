@@ -2,11 +2,10 @@ name: Build and Release Firmware
 
 on:
   push:
+    branches:
+      - '**'  # Build on all branch pushes
     tags:
-      - 'v*'
-  schedule:
-    # Nightly builds at 2 AM UTC every day
-    - cron: '0 2 * * *'
+      - 'v*'  # Release on tag pushes
   workflow_dispatch:
     # Allow manual trigger
 
