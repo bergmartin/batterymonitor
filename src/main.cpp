@@ -345,6 +345,15 @@ void loop()
         commandHandler.checkCommands();
         delay(200);
       }
+      
+      // Re-check if deep sleep is still enabled after the wait period
+      // (user may have disabled it with 'nosleep' command)
+      if (!config.deepSleepEnabled)
+      {
+        Serial.println("Deep sleep was disabled during wait period");
+        delay(Config::READING_INTERVAL_MS);
+        return; // Skip deep sleep and go to next loop iteration
+      }
     }
 
     // Wait a moment for any processing
