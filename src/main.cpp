@@ -351,22 +351,50 @@ void loop()
       if (!config.deepSleepEnabled)
       {
         Serial.println("Deep sleep was disabled during wait period");
-        delay(Config::READING_INTERVAL_MS);
-        return; // Skip deep sleep and go to next loop iteration
+        // Don't enter deep sleep - fall through to stay awake
+      }
+      else
+      {
+        // Wait a moment for any processing
+        delay(2000);
+        // Enter deep sleep
+        enterDeepSleep();
       }
     }
-
-    // Wait a moment for any processing
-    delay(2000);
-
-    // Enter deep sleep
-    enterDeepSleep();
+    else
+    {
+      // Not first boot - enter deep sleep immediately
+      delay(2000);
+      enterDeepSleep();
+    }
   }
-  else
+  
+  // If we reach here, deep sleep is disabled or was disabled during first boot wait
+  if (!config.deepSleepEnabled)
   {
-    // Fall back to normal delay if deep sleep disabled
-    Serial.println("Deep sleep disabled, waiting...");
+    // Stay awake and listen for commands indefinitely
+    Serial.println("\n═════════════════════════════════");
+    Serial.println("Deep sleep DISABLED - staying awake");
+    Serial.println("Device will NOT reconnect or reboot");
+    Serial.println("Listening for commands...");
     Serial.println("Type 'sleep' to re-enable deep sleep");
-    delay(Config::READING_INTERVAL_MS);
+    Serial.println("Type 'help' to see all commands");
+    Serial.println("═════════════════════════════════\n");
+    
+    // Infinite loop - stay awake and listen for commands
+    // This prevents loop() from restarting and reconnecting
+    while (true)
+    {
+      commandHandler.checkCommands();
+      delay(200);
+      
+      // If deep sleep was re-enabled via 'sleep' command, break out
+      if (config.deepSleepEnabled)
+      {
+        Serial.println("Deep sleep re-enabled. Restarting to apply changes...");
+        delay(1000);
+        ESP.restart();
+      }
+    }
   }
 }
