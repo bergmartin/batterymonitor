@@ -39,6 +39,9 @@ namespace Config {
   constexpr unsigned long STARTUP_DELAY_MS = 1000;
   constexpr unsigned long SERIAL_BAUD_RATE = 115200;
   
+  // Appliance Relay Configuration
+  constexpr int APPLIANCE_RELAY_PIN = 26; // RTC-capable GPIO
+  
   // OTA Configuration
   constexpr bool AUTO_CHECK_OTA = false;  // Automatically check for updates on wake (disabled by default)
   // Note: Target OTA version is now stored in ConfigManager (use 'otaver' command to set)
@@ -81,6 +84,8 @@ namespace Config {
       constexpr float LOW_THRESHOLD = 12.0;        // ~25% - Should recharge soon
       constexpr float CRITICAL = 11.8;   // ~10% - Recharge immediately
       constexpr float MINIMUM = 10.5;    // 0% - Minimum safe voltage
+      constexpr float APPLIANCE_CUTOFF_VOLTAGE = 12.2; // Cutoff for appliance relay
+      constexpr float APPLIANCE_RECOVERY_VOLTAGE = 12.6; // Recovery for appliance relay
     }
     
   #elif BATTERY_TYPE == BATTERY_TYPE_LIFEPO4
@@ -92,6 +97,7 @@ namespace Config {
       constexpr float LOW_THRESHOLD = 12.8;        // ~25% - Should recharge soon
       constexpr float CRITICAL = 12.0;   // ~10% - Recharge immediately
       constexpr float MINIMUM = 10.0;    // 0% - Minimum safe voltage (4S = 4 × 2.5V)
+      constexpr float APPLIANCE_CUTOFF_VOLTAGE = 12.8; // Cutoff for appliance relay
     }
     
   #else

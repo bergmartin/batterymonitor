@@ -18,6 +18,8 @@ float VOLTAGE_NOMINAL = 12.4f;
 float VOLTAGE_LOW = 12.0f;
 float VOLTAGE_CRITICAL = 11.8f;
 float VOLTAGE_MIN = 10.5f;
+float VOLTAGE_APPLIANCE_CUTOFF = 12.2f;
+float VOLTAGE_APPLIANCE_RECOVERY = 12.6f;
 
 // Internal chemistry state
 static BatteryChemistry activeChemistry = BatteryChemistry::LEAD_ACID;
@@ -30,6 +32,8 @@ struct Thresholds {
   float LOW_THRESHOLD;
   float CRITICAL;
   float MINIMUM;
+  float APPLIANCE_CUTOFF;
+  float APPLIANCE_RECOVERY;
 };
 
 static constexpr Thresholds LEAD_ACID_THRESHOLDS{
@@ -38,7 +42,9 @@ static constexpr Thresholds LEAD_ACID_THRESHOLDS{
   12.4f,
   12.0f,
   11.8f,
-  10.5f
+  10.5f,
+  12.2f,
+  12.6f
 };
 
 static constexpr Thresholds LIFEPO4_THRESHOLDS{
@@ -47,7 +53,9 @@ static constexpr Thresholds LIFEPO4_THRESHOLDS{
   13.2f,
   12.8f,
   12.0f,
-  10.0f
+  10.0f,
+  12.8f,
+  13.2f
 };
 
 static const Thresholds& getThresholds() {
@@ -63,6 +71,8 @@ void BatteryMonitor::setChemistry(BatteryChemistry chemistry) {
   VOLTAGE_LOW = t.LOW_THRESHOLD;
   VOLTAGE_CRITICAL = t.CRITICAL;
   VOLTAGE_MIN = t.MINIMUM;
+  VOLTAGE_APPLIANCE_CUTOFF = t.APPLIANCE_CUTOFF;
+  VOLTAGE_APPLIANCE_RECOVERY = t.APPLIANCE_RECOVERY;
 }
 
 BatteryChemistry BatteryMonitor::getChemistry() {
@@ -241,4 +251,12 @@ float BatteryMonitor::getMinVoltage() {
 
 float BatteryMonitor::getMaxVoltage() {
   return getThresholds().FULL;
+}
+
+float BatteryMonitor::getApplianceCutoff() {
+  return getThresholds().APPLIANCE_CUTOFF;
+}
+
+float BatteryMonitor::getApplianceRecovery() {
+  return getThresholds().APPLIANCE_RECOVERY;
 }

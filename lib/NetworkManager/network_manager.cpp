@@ -125,12 +125,19 @@ bool NetworkManager::connectMQTT() {
             Serial.print("Subscribed to config topic (battery_type): ");
             Serial.println(cfgBatteryTypeTopic);
             
+            // Subscribe to appliance control topic
+            char applianceTopic[100];
+            snprintf(applianceTopic, sizeof(applianceTopic), "%s/appliance/set", Config::MQTT_TOPIC_BASE);
+            mqttClient.subscribe(applianceTopic, 1);
+            Serial.print("Subscribed to appliance topic: ");
+            Serial.println(applianceTopic);
+            
             // Publish availability state as "online"
-            char stateTopic[100];
-            snprintf(stateTopic, sizeof(stateTopic), "%s_availability/state", WiFi.getHostname());
-            mqttClient.publish(stateTopic, "online", true);
+            char availabilityStateTopic[100];
+            snprintf(availabilityStateTopic, sizeof(availabilityStateTopic), "%s_availability/state", WiFi.getHostname());
+            mqttClient.publish(availabilityStateTopic, "online", true);
             Serial.print("Published availability state: online to ");
-            Serial.println(stateTopic);
+            Serial.println(availabilityStateTopic);
             
             // Publish Home Assistant discovery messages
             publishHomeAssistantDiscovery();
@@ -263,6 +270,14 @@ void NetworkManager::publishReading(const BatteryReading& reading, int bootCount
         Serial.printf("❌ Failed to publish firmware version - State: %d, Buffer: %d bytes\n", 
                       mqttClient.state(), mqttClient.getBufferSize());
     }
+
+    // Appliance actual state
+    snprintf(topic, sizeof(topic), "%s_appliance/state", hostname);
+    bool actualState = digitalRead(Config::APPLIANCE_RELAY_PIN);
+    if (!mqttClient.publish(topic, actualState ? "ON" : "OFF", true)) {
+        Serial.printf("❌ Failed to publish appliance state - State: %d, Buffer: %d bytes\n", 
+                      mqttClient.state(), mqttClient.getBufferSize());
+    }
     
     Serial.printf("Published sensor states for device: %s\n", hostname);
 }
@@ -356,6 +371,15 @@ void NetworkManager::publishHomeAssistantDiscovery() {
         hostname, hostname, deviceInfo);
     if (!mqttClient.publish(topic, payload, true)) {
         Serial.println("Failed to publish battery type sensor config");
+    }
+
+    // Appliance Switch
+    snprintf(topic, sizeof(topic), "homeassistant/switch/%s_appliance/config", hostname);
+    snprintf(payload, sizeof(payload),
+        "{\"name\":\"Appliance\",\"state_topic\":\"%s_appliance/state\",\"command_topic\":\"%s/appliance/set\",\"payload_on\":\"ON\",\"payload_off\":\"OFF\",\"unique_id\":\"%s_appliance\",%s}",
+        hostname, Config::MQTT_TOPIC_BASE, hostname, deviceInfo);
+    if (!mqttClient.publish(topic, payload, true)) {
+        Serial.println("Failed to publish appliance switch config");
     }
     
     // Configure availability for all sensors (shared state topic)
@@ -490,5 +514,21 @@ void NetworkManager::mqttCallback(char* topic, byte* payload, unsigned int lengt
         mqttClient.publish(typeStateTopic, config.batteryType.c_str(), true);
         Serial.print("Published battery_type state: ");
         Serial.println(typeStateTopic);
+    }
+
+    // Handle appliance relay control
+    if (topicStr.endsWith("/appliance/set")) {
+        message.trim();
+        if (message.equalsIgnoreCase("ON") || message.equalsIgnoreCase("1") || message.equalsIgnoreCase("true")) {
+            config.applianceTargetState = true;
+        } else if (message.equalsIgnoreCase("OFF") || message.equalsIgnoreCase("0") || message.equalsIgnoreCase("false")) {
+            config.applianceTargetState = false;
+        } else {
+            Serial.println("Invalid appliance command. Use ON/OFF, 1/0, or true/false.");
+            return;
+        }
+        config.saveConfig();
+        Serial.print("Appliance target state updated via MQTT: ");
+        Serial.println(config.applianceTargetState ? "ON" : "OFF");
     }
 }

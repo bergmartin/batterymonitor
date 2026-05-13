@@ -29,7 +29,10 @@ public:
     // OTA target version
     String otaTargetVersion;
     
-    ConfigManager() : mqttPort(1883), deepSleepEnabled(true), batteryType("leadacid"), otaTargetVersion("") {}
+    // Appliance relay state
+    bool applianceTargetState;
+    
+    ConfigManager() : mqttPort(1883), deepSleepEnabled(true), batteryType("leadacid"), otaTargetVersion(""), applianceTargetState(false) {}
     
     void begin(const char* wifiSsidDefault, const char* wifiPassDefault,
                const char* mqttServerDefault, uint16_t mqttPortDefault,
@@ -54,6 +57,7 @@ public:
             preferences.putString("mqtt_id", mqttClientIDDefault);
             preferences.putBool("deep_sleep", true);
             preferences.putString("battery_type", "leadacid");
+            preferences.putBool("appl_state", false);
             preferences.putBool("initialized", true);
             
             Serial.println("Default credentials saved to NVS");
@@ -70,6 +74,7 @@ public:
         deepSleepEnabled = preferences.getBool("deep_sleep", true);
         batteryType = preferences.getString("battery_type", "leadacid");
         otaTargetVersion = preferences.getString("ota_target", "");
+        applianceTargetState = preferences.getBool("appl_state", false);
         
         Serial.println("\n╔═══════════════════════════════════════╗");
         Serial.println("║   Configuration Loaded from NVS       ║");
@@ -98,6 +103,7 @@ public:
         preferences.putBool("deep_sleep", deepSleepEnabled);
         preferences.putString("battery_type", batteryType);
         preferences.putString("ota_target", otaTargetVersion);
+        preferences.putBool("appl_state", applianceTargetState);
         
         Serial.println("Configuration saved to NVS");
     }
@@ -151,6 +157,8 @@ public:
         Serial.println(mqttClientID);
         Serial.print("Deep Sleep: ");
         Serial.println(deepSleepEnabled ? "Enabled" : "Disabled");
+        Serial.print("Appliance Target: ");
+        Serial.println(applianceTargetState ? "ON" : "OFF");
         Serial.print("OTA Target Version: ");
         Serial.println(otaTargetVersion.length() > 0 ? otaTargetVersion : "(not set)");
         Serial.println();

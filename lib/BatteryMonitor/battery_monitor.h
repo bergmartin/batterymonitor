@@ -62,6 +62,8 @@ public:
   static const char* getBatteryTypeName();
   static float getMinVoltage();
   static float getMaxVoltage();
+  static float getApplianceCutoff();
+  static float getApplianceRecovery();
   
 private:
   // ADC reading function
@@ -84,5 +86,7 @@ extern float VOLTAGE_NOMINAL;
 extern float VOLTAGE_LOW;
 extern float VOLTAGE_CRITICAL;
 extern float VOLTAGE_MIN;
+extern float VOLTAGE_APPLIANCE_CUTOFF;
+extern float VOLTAGE_APPLIANCE_RECOVERY;
 
 #endif // BATTERY_MONITOR_H
