@@ -23,6 +23,8 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
+#include <driver/rtc_io.h>
+#include <driver/gpio.h>
 #include "battery_monitor.h"
 #include "esp_sleep.h"
 #include "config_manager.h"
@@ -39,6 +41,7 @@
 // RTC memory to preserve data across deep sleep
 RTC_DATA_ATTR int bootCount = 0;
 RTC_DATA_ATTR float lastVoltage = 0.0;
+RTC_DATA_ATTR bool applianceForcedOff = false;
 
 // Global objects
 BatteryMonitor monitor;
@@ -113,12 +116,29 @@ void enterDeepSleep()
   // Configure timer wakeup
   esp_sleep_enable_timer_wakeup(Config::DEEP_SLEEP_INTERVAL_US);
 
+  // Enable GPIO hold for the relay pin to maintain state during sleep
+  if (rtc_gpio_is_valid_gpio((gpio_num_t)Config::APPLIANCE_RELAY_PIN)) {
+      rtc_gpio_hold_en((gpio_num_t)Config::APPLIANCE_RELAY_PIN);
+  } else {
+      gpio_hold_en((gpio_num_t)Config::APPLIANCE_RELAY_PIN);
+  }
+
   // Enter deep sleep
   esp_deep_sleep_start();
 }
 
 void setup()
 {
+  // Disable GPIO hold on boot to allow reconfiguration
+  if (rtc_gpio_is_valid_gpio((gpio_num_t)Config::APPLIANCE_RELAY_PIN)) {
+      rtc_gpio_hold_dis((gpio_num_t)Config::APPLIANCE_RELAY_PIN);
+  } else {
+      gpio_hold_dis((gpio_num_t)Config::APPLIANCE_RELAY_PIN);
+  }
+  
+  // Initialize appliance relay pin
+  pinMode(Config::APPLIANCE_RELAY_PIN, OUTPUT);
+
   // Initialize serial communication
   Serial.begin(Config::SERIAL_BAUD_RATE);
   delay(500); // Short delay for serial connection
@@ -243,6 +263,49 @@ void loop()
 {
   // Take reading immediately
   BatteryReading reading = monitor.readBattery();
+
+  // Evaluate appliance relay logic with hysteresis:
+  // - Turns OFF if voltage < cutoff
+  // - Reactivates only if voltage >= recovery (if target state is ON)
+  bool isLow = reading.voltage < BatteryMonitor::getApplianceCutoff();
+  bool isRecovered = reading.voltage >= BatteryMonitor::getApplianceRecovery();
+  bool actualState = false;
+
+  if (config.applianceTargetState) {
+    if (applianceForcedOff) {
+      if (isRecovered) {
+        applianceForcedOff = false;
+        actualState = true;
+        Serial.println("✅ Appliance voltage recovered. Reactivating relay.");
+      } else {
+        actualState = false;
+        Serial.printf("⏳ Appliance waiting for recovery threshold (%.2fV). Current: %.2fV\n", 
+                      BatteryMonitor::getApplianceRecovery(), reading.voltage);
+      }
+    } else {
+      if (isLow) {
+        applianceForcedOff = true;
+        actualState = false;
+        Serial.println("⚠️  Battery voltage critical for appliance. Forcing relay OFF.");
+      } else {
+        actualState = true;
+      }
+    }
+  } else {
+    // If target state is OFF, reset the forced flag and keep relay off
+    applianceForcedOff = false;
+    actualState = false;
+  }
+
+  digitalWrite(Config::APPLIANCE_RELAY_PIN, actualState ? HIGH : LOW);
+  
+  if (config.applianceTargetState) {
+    if (actualState) {
+      Serial.println("Appliance relay is: ON (Battery OK)");
+    }
+  } else {
+    Serial.println("Appliance relay is: OFF (Target is OFF)");
+  }
 
   // Store voltage in RTC memory
   lastVoltage = reading.voltage;
