@@ -36,15 +36,15 @@ See [DEEP_SLEEP.md](doc/DEEP_SLEEP.md) for detailed power analysis.
 ### Components
 - ESP32 development board
 - 12V battery
-- 30kΩ resistor (R1)
-- 10kΩ resistor (R2)
+- 100kΩ resistor (R1)
+- 22kΩ resistor (R2)
 - SH1106 OLED Display (128x64, I2C) - optional but recommended
 - Connecting wires
 
 ### Circuit Diagram
 
 ```
-12V Battery (+) ----[30kΩ]----+----[10kΩ]---- GND
+12V Battery (+) ----[100kΩ]----+----[22kΩ]---- GND
                                |
                           GPIO34 (ADC)
                           ESP32
@@ -52,18 +52,18 @@ See [DEEP_SLEEP.md](doc/DEEP_SLEEP.md) for detailed power analysis.
 
 ### Voltage Divider Explanation
 
-The ESP32 ADC can only read voltages up to 3.3V. To safely measure a 12V battery, we use a voltage divider:
+The ESP32 ADC can only read voltages up to 3.3V. To safely measure a 12V battery (and up to 14.6V for LiFePO4), we use a voltage divider:
 
-- **R1** (30kΩ) + **R2** (10kΩ) creates a 4:1 ratio
-- 12V battery voltage becomes ~3V at the ADC pin
+- **R1** (100kΩ) + **R2** (22kΩ) creates a 5.55:1 ratio
+- 12V battery voltage becomes ~2.16V at the ADC pin
 - Formula: `V_ADC = V_Battery × (R2 / (R1 + R2))`
-- Result: `V_ADC = 12V × (10kΩ / 40kΩ) = 3V`
+- Result: `V_ADC = 12V × (22kΩ / 122kΩ) = 2.16V`
 
 ## Wiring Instructions
 
 1. **Connect Voltage Divider:**
-   - Solder 30kΩ resistor (R1) to battery positive terminal
-   - Connect 10kΩ resistor (R2) between the junction and GND
+   - Solder 100kΩ resistor (R1) to battery positive terminal
+   - Connect 22kΩ resistor (R2) between the junction and GND
    - Connect junction point to GPIO34 on ESP32
 
 2. **Ground Connection:**
@@ -213,7 +213,7 @@ You can adjust these parameters in `lib/BatteryMonitor/battery_config.h` (in the
 
 ```cpp
 constexpr int BATTERY_ADC_PIN = 34;           // ADC pin (GPIO34)
-constexpr float VOLTAGE_DIVIDER_RATIO = 4.0;  // Adjust if using different resistors
+constexpr float VOLTAGE_DIVIDER_RATIO = 5.545;  // Adjust if using different resistors
 constexpr unsigned long READING_INTERVAL_MS = 10000;  // Reading interval (active mode, 10 seconds)
 constexpr uint64_t DEEP_SLEEP_INTERVAL_US = 3600000000ULL;  // Deep sleep interval (1 hour)
 ```

@@ -12,6 +12,19 @@ const float VOLTAGE_DIVIDER_RATIO = Config::VOLTAGE_DIVIDER_RATIO;
 const float ADC_REFERENCE_VOLTAGE = Config::ADC_REFERENCE_VOLTAGE;
 const int ADC_RESOLUTION = Config::ADC_MAX_VALUE;
 // Dynamic values based on runtime chemistry
+#if BATTERY_TYPE == BATTERY_TYPE_LIFEPO4
+const char* BATTERY_TYPE_NAME = "LiFePO4";
+float VOLTAGE_FULL = 14.6f;
+float VOLTAGE_NOMINAL = 13.2f;
+float VOLTAGE_LOW = 12.8f;
+float VOLTAGE_CRITICAL = 12.0f;
+float VOLTAGE_MIN = 10.0f;
+float VOLTAGE_APPLIANCE_CUTOFF = 12.8f;
+float VOLTAGE_APPLIANCE_RECOVERY = 13.2f;
+
+// Internal chemistry state
+static BatteryChemistry activeChemistry = BatteryChemistry::LIFEPO4;
+#else
 const char* BATTERY_TYPE_NAME = "Lead-Acid";
 float VOLTAGE_FULL = 12.7f;
 float VOLTAGE_NOMINAL = 12.4f;
@@ -23,6 +36,7 @@ float VOLTAGE_APPLIANCE_RECOVERY = 12.6f;
 
 // Internal chemistry state
 static BatteryChemistry activeChemistry = BatteryChemistry::LEAD_ACID;
+#endif
 
 // Threshold sets
 struct Thresholds {

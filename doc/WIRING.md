@@ -10,7 +10,7 @@
                             │
                             └──────────────→ GND ──→ ESP32 GND
                                                       
-12V Battery (+) ────[30kΩ R1]────┬────[10kΩ R2]──── GND
+12V Battery (+) ────[100kΩ R1]───┬────[22kΩ R2]──── GND
                                  │
                            GPIO34 (ESP32)
 
@@ -24,8 +24,8 @@
 |-----------|--------------|----------|-------|
 | ESP32 Development Board | Any variant with GPIO34 | 1 | With built-in USB/Serial |
 | Buck Converter | LM2596 or similar, 12V→5V | 1 | Adjustable output recommended |
-| Resistor R1 | 30kΩ, 1/4W or higher | 1 | For voltage divider (high side) |
-| Resistor R2 | 10kΩ, 1/4W or higher | 1 | For voltage divider (low side) |
+| Resistor R1 | 100kΩ, 1/4W or higher | 1 | For voltage divider (high side) |
+| Resistor R2 | 22kΩ, 1/4W or higher | 1 | For voltage divider (low side) |
 | Fuse | 1A, automotive blade type | 1 | Safety protection |
 | Fuse Holder | Inline blade fuse holder | 1 | For easy replacement |
 
@@ -64,17 +64,17 @@
 
 **Resistor Connection:**
 ```
-1. Battery Positive (+) → 30kΩ Resistor (R1)
+1. Battery Positive (+) → 100kΩ Resistor (R1)
 2. Other end of R1 → Junction point (connect to GPIO34)
-3. Junction point → 10kΩ Resistor (R2)
+3. Junction point → 22kΩ Resistor (R2)
 4. Other end of R2 → GND (common ground)
 ```
 
 **Voltage Divider Formula:**
 ```
 V_GPIO34 = V_Battery × (R2 / (R1 + R2))
-         = 12V × (10kΩ / 40kΩ)
-         = 3.0V  (safe for ESP32's 3.3V ADC)
+         = 12V × (22kΩ / 122kΩ)
+         = 2.16V  (safe for ESP32's 3.3V ADC)
 ```
 
 ### Step 3: Ground Connection
@@ -162,7 +162,7 @@ Before powering on, verify:
 
 - [ ] Buck converter adjusted to 5.0V output (measured with multimeter)
 - [ ] All ground connections are secure and common
-- [ ] Voltage divider resistors are correct values (30kΩ and 10kΩ)
+- [ ] Voltage divider resistors are correct values (100kΩ and 22kΩ)
 - [ ] No shorts between power and ground
 - [ ] Fuse is installed in positive line
 - [ ] Battery polarity is correct (+ to +, − to −)

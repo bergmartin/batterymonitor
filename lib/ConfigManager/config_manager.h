@@ -3,6 +3,13 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include "battery_config.h"
+
+#if BATTERY_TYPE == BATTERY_TYPE_LIFEPO4
+    #define DEFAULT_BATTERY_TYPE "lifepo4"
+#else
+    #define DEFAULT_BATTERY_TYPE "leadacid"
+#endif
 
 class ConfigManager {
 private:
@@ -32,7 +39,7 @@ public:
     // Appliance relay state
     bool applianceTargetState;
     
-    ConfigManager() : mqttPort(1883), deepSleepEnabled(true), batteryType("leadacid"), otaTargetVersion(""), applianceTargetState(false) {}
+    ConfigManager() : mqttPort(1883), deepSleepEnabled(true), batteryType(DEFAULT_BATTERY_TYPE), otaTargetVersion(""), applianceTargetState(false) {}
     
     void begin(const char* wifiSsidDefault, const char* wifiPassDefault,
                const char* mqttServerDefault, uint16_t mqttPortDefault,
@@ -56,7 +63,7 @@ public:
             preferences.putString("mqtt_pass", mqttPassDefault);
             preferences.putString("mqtt_id", mqttClientIDDefault);
             preferences.putBool("deep_sleep", true);
-            preferences.putString("battery_type", "leadacid");
+            preferences.putString("battery_type", DEFAULT_BATTERY_TYPE);
             preferences.putBool("appl_state", false);
             preferences.putBool("initialized", true);
             
@@ -72,7 +79,7 @@ public:
         mqttPassword = preferences.getString("mqtt_pass", mqttPassDefault);
         mqttClientID = preferences.getString("mqtt_id", mqttClientIDDefault);
         deepSleepEnabled = preferences.getBool("deep_sleep", true);
-        batteryType = preferences.getString("battery_type", "leadacid");
+        batteryType = preferences.getString("battery_type", DEFAULT_BATTERY_TYPE);
         otaTargetVersion = preferences.getString("ota_target", "");
         applianceTargetState = preferences.getBool("appl_state", false);
         

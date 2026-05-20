@@ -123,21 +123,21 @@ void test_adc_conversion_zero() {
 }
 
 void test_adc_conversion_max() {
-  // Max ADC (4095) should give 3.3V at ADC, which is 13.2V at battery
+  // Max ADC (4095) should give 3.3V at ADC, which is 18.3V at battery (3.3 * 5.545)
   float voltage = adcToBatteryVoltage(4095);
-  TEST_ASSERT_FLOAT_WITHIN(0.01, 13.2, voltage);
+  TEST_ASSERT_FLOAT_WITHIN(0.01, 18.2985, voltage);
 }
 
 void test_adc_conversion_mid() {
-  // Half ADC (2048) should give ~1.65V at ADC, which is ~6.6V at battery
+  // Half ADC (2048) should give ~1.65V at ADC, which is ~9.15V at battery (1.65 * 5.545)
   float voltage = adcToBatteryVoltage(2048);
-  TEST_ASSERT_FLOAT_WITHIN(0.1, 6.6, voltage);
+  TEST_ASSERT_FLOAT_WITHIN(0.1, 9.15, voltage);
 }
 
 void test_adc_conversion_typical_12v() {
-  // 12V battery = 3V at ADC = ADC reading of ~3724
-  // Reverse: ADC 3724 should give ~12V
-  float voltage = adcToBatteryVoltage(3724);
+  // 12V battery = 2.164V at ADC = ADC reading of ~2685
+  // Reverse: ADC 2685 should give ~12V
+  float voltage = adcToBatteryVoltage(2685);
   TEST_ASSERT_FLOAT_WITHIN(0.1, 12.0, voltage);
 }
 
@@ -146,23 +146,17 @@ void test_adc_conversion_typical_12v() {
 // ============================================================================
 
 void test_voltage_divider_ratio() {
-  // With 30kΩ and 10kΩ resistors: ratio = (30k + 10k) / 10k = 4.0
-  TEST_ASSERT_EQUAL_FLOAT(4.0, VOLTAGE_DIVIDER_RATIO);
+  // With 100kΩ and 22kΩ resistors: ratio = (100k + 22k) / 22k = 5.545
+  TEST_ASSERT_EQUAL_FLOAT(5.545, VOLTAGE_DIVIDER_RATIO);
 }
 
 void test_voltage_divider_safety() {
   // Max battery voltage through divider should not exceed ADC reference
-  // For Lead-Acid: 12.7V / 4.0 = 3.175V (safe, < 3.3V)
-  // For LiFePO4: 14.6V / 4.0 = 3.65V (exceeds 3.3V - needs higher ratio!)
+  // For Lead-Acid: 12.7V / 5.545 = 2.29V (safe, < 3.3V)
+  // For LiFePO4: 14.6V / 5.545 = 2.633V (safe, < 3.3V)
   float maxAdcVoltage = VOLTAGE_FULL / VOLTAGE_DIVIDER_RATIO;
   
-  #if BATTERY_TYPE == BATTERY_TYPE_LEAD_ACID
-    TEST_ASSERT_LESS_THAN(ADC_REFERENCE_VOLTAGE, maxAdcVoltage);
-  #elif BATTERY_TYPE == BATTERY_TYPE_LIFEPO4
-    // For LiFePO4, we expect this to be close to or slightly over 3.3V
-    // This is a known limitation - test documents it
-    TEST_ASSERT_FLOAT_WITHIN(0.5, ADC_REFERENCE_VOLTAGE, maxAdcVoltage);
-  #endif
+  TEST_ASSERT_LESS_THAN(ADC_REFERENCE_VOLTAGE, maxAdcVoltage);
 }
 
 // ============================================================================

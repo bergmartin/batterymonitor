@@ -7,8 +7,8 @@
  * Publishes readings to MQTT broker
  *
  * Hardware Setup:
- * - Battery + terminal -> R1 (30kΩ) -> ADC Pin (GPIO34) -> R2 (10kΩ) -> GND
- * - This creates a 4:1 voltage divider (12V becomes ~3V at ADC)
+ * - Battery + terminal -> R1 (100kΩ) -> ADC Pin (GPIO34) -> R2 (22kΩ) -> GND
+ * - This creates a 5.55:1 voltage divider (12V becomes ~2.16V at ADC)
  *
  * Power Consumption:
  * - Active: ~80-160 mA (during reading, ~5 seconds)

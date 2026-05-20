@@ -11,9 +11,9 @@
 #define BATTERY_TYPE_LEAD_ACID 1
 #define BATTERY_TYPE_LIFEPO4 2
 
-// Default to Lead-Acid if not specified
+// Default to LiFePO4 if not specified
 #ifndef BATTERY_TYPE
-#define BATTERY_TYPE BATTERY_TYPE_LEAD_ACID
+#define BATTERY_TYPE BATTERY_TYPE_LIFEPO4
 #endif
 
 // Hardware Configuration
@@ -27,8 +27,8 @@ namespace Config {
   constexpr float ADC_REFERENCE_VOLTAGE = 3.3;  // Volts
   
   // Voltage Divider Configuration
-  // R1 = 30kΩ (high side), R2 = 10kΩ (low side)
-  constexpr float VOLTAGE_DIVIDER_RATIO = 4.0;  // (R1 + R2) / R2
+  // R1 = 100kΩ (high side), R2 = 22kΩ (low side)
+  constexpr float VOLTAGE_DIVIDER_RATIO = 5.545;  // (R1 + R2) / R2
   
   // Sampling Configuration
   constexpr int SAMPLE_COUNT = 10;  // Number of ADC samples to average
@@ -98,6 +98,7 @@ namespace Config {
       constexpr float CRITICAL = 12.0;   // ~10% - Recharge immediately
       constexpr float MINIMUM = 10.0;    // 0% - Minimum safe voltage (4S = 4 × 2.5V)
       constexpr float APPLIANCE_CUTOFF_VOLTAGE = 12.8; // Cutoff for appliance relay
+      constexpr float APPLIANCE_RECOVERY_VOLTAGE = 13.2; // Recovery for appliance relay
     }
     
   #else

@@ -16,7 +16,7 @@ Created `battery_config.h` with structured configuration:
 namespace Config {
   // Hardware settings
   constexpr int BATTERY_ADC_PIN = 34;
-  constexpr float VOLTAGE_DIVIDER_RATIO = 4.0;
+  constexpr float VOLTAGE_DIVIDER_RATIO = 5.545;
   
   // Battery-specific thresholds
   namespace Voltage {
