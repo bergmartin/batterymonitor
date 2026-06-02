@@ -1,0 +1,10 @@
+Comment,Designator,Footprint,LCSC Part #
+100uF/25V,C1,Capacitor_SMD:CP_Elec_6.3x5.4,C162594
+10uF/6.3V,C2,Capacitor_SMD:C_0805_2012Metric,C15849
+100nF/10V,C3,Capacitor_SMD:C_0805_2012Metric,C49678
+12V_Input,J1,TerminalBlock_TE-Connectivity:TerminalBlock_TE_282834-2_1x02_P2.54mm_Horizontal,C50993
+100k,R1,Resistor_SMD:R_0805_2012Metric,C149504
+22k,R2,Resistor_SMD:R_0805_2012Metric,C17560
+AMS1117-3.3,U1,Package_TO_SOT_SMD:SOT-223-3_TabPin2,C6186
+ESP32-WROOM-32U-N4,U2,RF_Module:ESP32-WROOM-32U,C328062
+Conn_01x04_Pin,J2,Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical,C124375
