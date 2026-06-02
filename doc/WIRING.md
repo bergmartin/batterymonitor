@@ -1,7 +1,14 @@
 # ESP32 Battery Monitor - Wiring Guide
 
-## Complete Wiring Diagram
+This guide describes how to connect and configure the electronic components for the Battery Monitor. There are two primary options to build this project:
+1. **Option A: Breadboard / Prototyping Setup**: Using an off-the-shelf ESP32 development board, an external buck converter module (e.g., LM2596), and discrete resistors.
+2. **Option B: Custom PCB Design**: Solder SMT components directly onto the custom PCB, featuring an integrated high-efficiency **AP63300 synchronous buck converter** (12V → 3.3V) and an on-board voltage divider.
 
+---
+
+## Option A: Breadboard / Prototyping Setup
+
+### Prototyping Wiring Diagram
 ```
                     ┌─────────────────┐
 12V Battery (+) ────┤ Buck Converter  │
@@ -17,256 +24,204 @@
 12V Battery (−) ───────────────────────────────────→ Common GND
 ```
 
-## Required Components
-
-### Electronic Components
+### Option A Required Components
 | Component | Specification | Quantity | Notes |
 |-----------|--------------|----------|-------|
-| ESP32 Development Board | Any variant with GPIO34 | 1 | With built-in USB/Serial |
-| Buck Converter | LM2596 or similar, 12V→5V | 1 | Adjustable output recommended |
+| ESP32 Development Board | NodeMCU or similar with GPIO34 | 1 | With built-in USB/Serial & 3.3V LDO |
+| Buck Converter Module | LM2596 or similar, 12V→5V | 1 | Adjustable output recommended |
 | Resistor R1 | 100kΩ, 1/4W or higher | 1 | For voltage divider (high side) |
 | Resistor R2 | 22kΩ, 1/4W or higher | 1 | For voltage divider (low side) |
 | Fuse | 1A, automotive blade type | 1 | Safety protection |
 | Fuse Holder | Inline blade fuse holder | 1 | For easy replacement |
 
-### Wiring & Connectors
-| Item | Specification | Length | Purpose |
-|------|--------------|--------|---------|
-| Power Wire | 18-20 AWG stranded | 1-2m | Battery to buck converter |
-| Signal Wire | 22-24 AWG stranded | 0.5m | Buck to ESP32, voltage divider |
-| Heat Shrink Tubing | Assorted sizes | As needed | Wire insulation |
-| Terminal Blocks | 2-position screw terminal | 2-3 | Secure connections |
-| Connector (optional) | Anderson Powerpole or XT60 | 1 set | Quick disconnect |
+### Option A Step-by-Step Instructions
 
-### Optional but Recommended
-- Breadboard or perfboard for permanent mounting
-- Project enclosure (weatherproof if outdoors)
-- LED indicator (with 220Ω resistor) for power/activity
-- Reverse polarity protection diode (1N5819 or similar)
-- Small capacitor (100µF) near ESP32 VIN for stability
+#### 1. Power Supply Circuit Setup:
+* Connect the battery positive (+) terminal through the 1A fuse to the buck converter input (`IN+`).
+* Connect the battery negative (-) terminal to the buck converter input (`IN-`).
+* **Critical:** Use a multimeter to measure the output of the buck converter. Adjust the onboard potentiometer until the output reads exactly **5.0V** before connecting it to the ESP32.
+* Connect the buck converter output (`OUT+`) to the ESP32 `VIN` (or `5V`) pin.
+* Connect the buck converter output (`OUT-`) to the ESP32 `GND` pin.
 
-## Detailed Wiring Instructions
+#### 2. Voltage Divider Setup:
+* Connect the battery positive (+) terminal to one end of the 100kΩ resistor ($R_1$).
+* Connect the other end of $R_1$ to a junction point.
+* Connect the junction point to the ESP32 analog input pin (**GPIO34**).
+* Connect a 22kΩ resistor ($R_2$) between the junction point and the common `GND`.
+* The divider divides the battery voltage down by a ratio of $5.545:1$ (safe $2.16\text{V}$ for $12\text{V}$ input, max $2.63\text{V}$ for fully-charged LiFePO4 battery at $14.6\text{V}$).
 
-### Step 1: Power Supply Circuit
+---
 
-**Buck Converter Setup:**
+## Option B: Custom PCB Design (Recommended)
+
+The custom PCB (located in the [pcb/](file:///home/martin/projects/batterymonitor/pcb) directory) integrates all power management, sensing, and display routing onto a single compact board.
+
+### Custom PCB Architecture Block Diagram
 ```
-1. Battery Positive (+) → Fuse (1A) → Buck Converter IN+
-2. Battery Negative (−) → Buck Converter IN−
-3. Adjust buck converter output to 5.0V (use multimeter)
-4. Buck Converter OUT+ → ESP32 VIN pin
-5. Buck Converter OUT− → ESP32 GND pin
-```
-
-**Important:** Test the buck converter output voltage BEFORE connecting to ESP32!
-
-### Step 2: Voltage Divider Circuit
-
-**Resistor Connection:**
-```
-1. Battery Positive (+) → 100kΩ Resistor (R1)
-2. Other end of R1 → Junction point (connect to GPIO34)
-3. Junction point → 22kΩ Resistor (R2)
-4. Other end of R2 → GND (common ground)
-```
-
-**Voltage Divider Formula:**
-```
-V_GPIO34 = V_Battery × (R2 / (R1 + R2))
-         = 12V × (22kΩ / 122kΩ)
-         = 2.16V  (safe for ESP32's 3.3V ADC)
+                        Custom PCB (All-in-One)
+                    ┌──────────────────────────────────┐
+                    │  12V Input (J1 Screw Terminal)   │
+                    │         │                        │
+                    │         ├──→ [AP63300 Buck]      │
+                    │         │    (12V → 3.3V)        │
+                    │         │         │              │
+                    │         │         └──→ 3.3V ───┐ │
+                    │         │                      │ │
+                    │         └─→ [Divider R1/R2]    │ │
+                    │                   │            │ │
+                    │                 GPIO34         │ │
+                    │                   │            │ │
+                    │                   ▼            ▼ │
+                    │           [ESP32-WROOM-32U module]
+                    │                   │              │
+                    │                   └──→ [J2 OLED] │
+                    └─────────────────────────│────────┘
+                                              ▼
+                                      SH1106 OLED (I2C)
 ```
 
-### Step 3: Ground Connection
+### Integrated AP63300 Synchronous Buck Converter
+Instead of using an external bulk module that regulates to 5V, the PCB integrates a **Diodes Inc. AP63300** synchronous buck converter (`U1`).
+* **High Efficiency**: Operates at $>90\%$ efficiency, generating minimal heat compared to linear regulators (like the AMS1117 which wastes energy as heat).
+* **Direct 3.3V Power**: Steps the battery's 12V input directly down to **3.3V**, powering the ESP32 module (`U2`) directly.
+* **Low Noise (EMI)**: Features a frequency spread spectrum (FSS) clocking system operating at 500kHz to reduce electromagnetic interference.
 
-**Critical:** All grounds must be connected together:
-```
-Battery (−) = Buck Converter GND = ESP32 GND = Voltage Divider GND
-```
+#### AP63300 Supporting Passive Network
+The PCB utilizes the following optimized component layout:
+* **Inductor (`L1`)**: A $4.7\,\mu\text{H}$ Sunlord molded power inductor (`MPL2016S4R7MHT`, LCSC Part: `C98335`) in an 0806 package, selected for optimal switching performance.
+* **Bootstrap Capacitor (`C4`)**: A $100\,\text{nF}$ 50V X7R ceramic capacitor (`C49678`) connected between the `SW` (Switching) and `BST` (Bootstrap) pins to drive the high-side MOSFET.
+* **Feedback Network (`R3`, `R4`)**:
+  * $R_3 = 100\,\text{k}\Omega$ 1% 0805 (`C149504`)
+  * $R_4 = 32\,\text{k}\Omega$ 1% 0805 (`C182555`)
+  * Based on the feedback reference voltage ($V_{\text{fb}} = 0.8\text{V}$), this resistor ratio delivers exactly $3.30\text{V}$ output:
+    $$V_{\text{out}} = 0.8\text{V} \times \left(1 + \frac{R_3}{R_4}\right) = 0.8\text{V} \times \left(1 + \frac{100\,\text{k}\Omega}{32\,\text{k}\Omega}\right) = 3.30\text{V}$$
+* **Input/Output Filtering (`C1`, `C2`)**:
+  * Input capacitor $C_1$: $10\,\mu\text{F}$ 25V X5R ceramic capacitor (`C40894`) to handle voltage ripples.
+  * Output capacitor $C_2$: $22\,\mu\text{F}$ 10V X5R ceramic capacitor (`C89572`) to stabilize the 3.3V rail.
 
-Use a common ground point (star grounding preferred).
+### Custom PCB Step-by-Step Instructions
 
-### Step 4: GPIO Connection
+#### 1. Assemble and Solder Components:
+* Solder the SMT components in order of height (starting with resistors/capacitors, then the AP63300 IC, inductor, and finally the ESP32 module).
+* Ensure correct alignment of pin 1 for the AP63300 (`U1`) and the ESP32-WROOM-32U (`U2`).
 
-**ESP32 Pin Mapping:**
-```
-GPIO34 (ADC1_CH6) ← Voltage Divider Junction Point
-VIN (5V)          ← Buck Converter OUT+
-GND               ← Common Ground
-```
+#### 2. Connect the Input:
+* Connect the battery positive (+) terminal through an inline 1A fuse to pin 1 of the screw terminal block `J1` (labeled `12V`).
+* Connect the battery negative (-) terminal to pin 2 of `J1` (labeled `GND`).
 
-**Note:** GPIO34 is input-only, perfect for ADC reading.
+#### 3. Connect the Display:
+* Connect the SH1106 OLED I2C display to the 4-pin female socket/header `J2`. Pinout mappings are:
+  * **Pin 1 (3.3V)** → OLED VCC
+  * **Pin 2 (GND)** → OLED GND
+  * **Pin 3 (SCL)** → OLED SCL
+  * **Pin 4 (SDA)** → OLED SDA
 
-## Pin Configuration Reference
+---
 
-### ESP32 Pins Used
-| Pin | Function | Connection |
-|-----|----------|------------|
-| GPIO34 | ADC Input | Voltage divider junction (3V max) |
-| VIN | Power Input | Buck converter 5V output |
-| GND | Ground | Common ground |
+## Detailed Pin Mappings & Configuration
 
-### Buck Converter Pins
-| Pin | Connection |
-|-----|------------|
-| IN+ | Battery + (through fuse) |
-| IN− | Battery − (ground) |
-| OUT+ | ESP32 VIN (5V) |
-| OUT− | ESP32 GND |
+### ESP32 Pin Assignment
+| ESP32 Pin | Function | Schematic Net | Connection / Purpose |
+|-----------|----------|---------------|----------------------|
+| **GPIO34** | ADC Input (ADC1_CH6) | `V_ADC` | Voltage divider junction (Reads battery voltage) |
+| **GPIO21** | I2C SDA | `SDA` | SH1106 OLED Display Data Line |
+| **GPIO22** | I2C SCL | `SCL` | SH1106 OLED Display Clock Line |
+| **3.3V** | Power Input | `3.3V` | Main power rail from buck converter |
+| **GND** | Ground | `GND` | Common ground reference |
 
-## Wire Gauge Recommendations
+### Voltage Divider Formula & Scaling
+The voltage divider uses $R_1 = 100\,\text{k}\Omega$ and $R_2 = 22\,\text{k}\Omega$.
+$$V_{\text{ADC}} = V_{\text{Battery}} \times \left(\frac{R_2}{R_1 + R_2}\right) = V_{\text{Battery}} \times \left(\frac{22\,\text{k}\Omega}{122\,\text{k}\Omega}\right)$$
+This yields a voltage scaling ratio of **$5.545$**.
+* At $12.0\text{V}$ battery voltage, the ADC pin receives $2.16\text{V}$.
+* At $14.6\text{V}$ (maximum charge for a 12V LiFePO4 battery), the ADC pin receives $2.63\text{V}$, which is safely under the ESP32's $3.3\text{V}$ limit.
 
-### Power Lines (12V Battery to Buck Converter)
-- **18-20 AWG** stranded wire
-- Red for positive, black for negative
-- Maximum length: 2 meters (to minimize voltage drop)
-- Current capacity: Up to 200 mA needed
+---
 
-### Signal Lines (Buck to ESP32, Voltage Divider)
-- **22-24 AWG** stranded wire
-- Any color (use red/black for clarity)
-- Keep as short as practical
-- Low current (<1 mA for voltage divider)
+## Testing & Calibration Procedure
 
-### Ground Wire
-- **18-20 AWG** (same as power)
-- Must be capable of carrying full current
-- Keep length minimal for stable ground reference
+### 1. Power Supply Test (Option A Only)
+1. Connect the battery to the buck converter (with fuse).
+2. Measure the buck converter output: should read `5.0V ± 0.1V`.
+3. Adjust the converter output potentiometer if necessary.
+4. Disconnect the battery.
+
+### 2. Voltage Divider Test
+1. Connect the voltage divider (or completed PCB) to the battery.
+2. Measure the voltage at the junction point (where GPIO34 connects).
+3. It should read `~3.0V` when connected to a 12V battery.
+4. Disconnect the battery.
+
+### 3. Complete System Test
+1. Solder or connect all components.
+2. Upload the firmware to the ESP32.
+3. Connect the battery and observe the serial/display output.
+4. Verify the voltage reading matches your multimeter reading (within `0.1V`).
+
+---
+
+## Wire Gauge & Color Coding Recommendations
+
+### Wire Gauge
+* **Power Lines (Battery to Board)**: Use **18-20 AWG** stranded wire. Red for positive, black for negative.
+* **Signal Lines**: Use **22-24 AWG** stranded wire for low-current signals (<1 mA).
+
+### Standard Colors
+* **Red**: Battery positive (+), 5V/3.3V power lines
+* **Black**: Ground (GND), battery negative (−)
+* **Yellow/Orange**: Signal wires (e.g., I2C lines, ADC line)
+
+---
 
 ## Safety Considerations
 
 ### Fuse Protection
-```
-Battery (+) ──[1A Fuse]── Buck Converter
-```
-- Protects against short circuits
-- Use automotive blade fuse for easy replacement
-- 1A rating is sufficient for ESP32 + margin
+* **Warning:** Always place a **1A inline fuse** on the positive line close to the battery. In case of a short circuit in the wiring or on the PCB, a 12V lead-acid or LiFePO4 battery can dump hundreds of amperes, creating a severe fire hazard.
 
-### Reverse Polarity Protection (Optional)
-```
-Battery (+) ──[Diode Anode→Cathode]── Buck Converter IN+
-```
-- Use Schottky diode (1N5819) - low voltage drop
-- Prevents damage if battery connected backwards
-- Small voltage drop (~0.3V) acceptable for 12V input
+### Grounding
+* **Common Ground**: All ground connections (Battery negative, Buck converter ground, ESP32 ground, and Display ground) must be connected to a single reference net (`GND`).
 
-### Voltage Divider Protection
-- Resistors prevent excessive current to GPIO
-- Even if ESP32 fails, max current = 12V / 40kΩ = 0.3 mA
-- Well within safe limits
+### PCB Thermal Management
+* Because the AP63300 is a highly efficient synchronous buck switching converter, it remains cool to the touch during normal operation. If the converter IC or inductor becomes hot, immediately disconnect power and check for a solder bridge or short circuit on the board.
 
-## Connection Checklist
-
-Before powering on, verify:
-
-- [ ] Buck converter adjusted to 5.0V output (measured with multimeter)
-- [ ] All ground connections are secure and common
-- [ ] Voltage divider resistors are correct values (100kΩ and 22kΩ)
-- [ ] No shorts between power and ground
-- [ ] Fuse is installed in positive line
-- [ ] Battery polarity is correct (+ to +, − to −)
-- [ ] ESP32 is not connected yet (test voltages first)
-- [ ] Junction voltage is ~3V when connected to 12V battery
-
-## Testing Procedure
-
-### 1. Power Supply Test
-```
-1. Connect battery to buck converter (with fuse)
-2. Measure buck converter output: should be 5.0V ± 0.1V
-3. Adjust if necessary using potentiometer on buck converter
-4. Disconnect battery
-```
-
-### 2. Voltage Divider Test
-```
-1. Connect voltage divider to battery
-2. Measure voltage at junction point (where GPIO34 connects)
-3. Should read ~3.0V with 12V battery
-4. Calculate: V_measured × 4 should equal battery voltage
-5. Disconnect battery
-```
-
-### 3. Complete System Test
-```
-1. Connect all components
-2. Upload code to ESP32
-3. Connect battery and observe serial output
-4. Verify voltage reading matches multimeter (within 0.1V)
-```
+---
 
 ## Troubleshooting
 
 ### ESP32 Won't Power On
-- Check buck converter output voltage (5V)
-- Verify ground connections
-- Check fuse continuity
-- Measure battery voltage (should be 10.5V+)
+* Check buck converter output voltage (5V for Option A, 3.3V for Option B).
+* Verify ground connections.
+* Check fuse continuity.
+* Measure battery voltage (should be >10.5V).
 
 ### Wrong Voltage Readings
-- Verify resistor values with multimeter
-- Check for loose connections at junction point
-- Ensure GPIO34 pin is used (not another GPIO)
-- Recalibrate voltage divider ratio in config if needed
+* Verify resistor values with a multimeter.
+* Check for loose connections at the junction point or terminal blocks.
+* Ensure GPIO34 pin is used (not another GPIO).
+* Adjust the `VOLTAGE_DIVIDER_RATIO` constant in your software configurations.
 
 ### Intermittent Readings
-- Check for loose wires, especially at junction
-- Add small capacitor (0.1µF) across R2 for stability
-- Verify good ground connection
+* Check for loose wires, especially at junctions.
+* Add a small capacitor (0.1µF) across $R_2$ for noise filtering and stability.
+* Verify a solid common ground connection.
 
-### Buck Converter Gets Hot
-- Normal if slightly warm, but shouldn't be too hot to touch
-- Check for shorts or excessive current draw
-- Ensure proper heat sinking if available
+---
 
-## Wire Color Coding Recommendations
+## Mounting & Enclosure Selection
 
-### Standard Colors
-- **Red:** Battery positive (+), 5V power
-- **Black:** Ground (GND), battery negative (−)
-- **Yellow/Orange:** Signal wires (voltage divider to GPIO34)
-- **Blue:** Optional indicator LEDs
+### Mounting Options
+* **Breadboard (Prototyping)**: Best for temporary testing, not suitable for permanent deployment.
+* **Perfboard (Semi-Permanent)**: Solder components for reliability. Mount ESP32 with pin headers.
+* **PCB (Permanent)**: Solder components directly to the custom PCB for a robust, professional design.
 
-### Labeling
-Use labels or tape markers to identify:
-- "BATT +" and "BATT −" at battery end
-- "ESP32 VIN" and "ESP32 GND" at ESP32 end
-- "GPIO34" at voltage divider junction
+### Enclosure Selection
+* **Indoor Use**: Basic plastic project box with ventilation holes.
+* **Outdoor/Automotive Use**: Use an IP65+ rated weatherproof enclosure with cable glands to seal wire entry points.
 
-## Mounting Recommendations
-
-### Breadboard (Prototyping)
-- Temporary setup for testing
-- Easy to modify
-- Not suitable for permanent installation
-
-### Perfboard (Semi-Permanent)
-- Solder components for reliability
-- Mount ESP32 with header pins
-- Can be enclosed in project box
-
-### PCB (Permanent)
-- Design custom PCB for clean installation
-- Include all components on single board
-- Professional appearance and reliability
-
-## Enclosure Selection
-
-### Indoor Use
-- Basic plastic project box
-- Ventilation holes for heat dissipation
-- Access hole for USB programming
-
-### Outdoor/Automotive Use
-- IP65+ rated weatherproof enclosure
-- Cable glands for wire entry
-- UV-resistant materials
-- Consider temperature extremes
+---
 
 ## Power Consumption from Battery
-
-With current configuration (1-hour deep sleep):
+With a standard deep-sleep configuration (e.g., 1-hour sleep interval):
 
 | State | Current Draw (from 12V) | Time per Day |
 |-------|------------------------|--------------|
@@ -274,38 +229,13 @@ With current configuration (1-hour deep sleep):
 | Sleep | ~1-5 mA | 23h 59m 30s |
 | **Average** | **~1-5 mA** | **24 hours** |
 
-**Daily consumption: ~1.3 mAh from 12V battery**
+* **Daily consumption: ~1.3 mAh from 12V battery**
+
+---
 
 ## Additional Resources
 
 ### Datasheets
-- ESP32: https://www.espressif.com/en/products/socs/esp32
-- LM2596: Buck converter datasheet
-- Resistor specifications: Check manufacturer data
-
-### Tools Needed
-- Multimeter (for voltage measurements)
-- Soldering iron (for permanent connections)
-- Wire strippers
-- Screwdriver set
-- Heat gun (for heat shrink tubing)
-
-## Final Notes
-
-⚠️ **Safety First:**
-- Always disconnect battery before making wiring changes
-- Double-check polarity before connecting
-- Use appropriate wire gauge for current capacity
-- Ensure all connections are secure and insulated
-- Test with multimeter before powering ESP32
-
-✅ **Best Practices:**
-- Keep wires as short as practical
-- Use strain relief for wire connections
-- Label all wires for future maintenance
-- Document any modifications
-- Test thoroughly before permanent installation
-
----
-
-For questions or issues, refer to the main README.md or open an issue on GitHub.
+* ESP32: https://www.espressif.com/en/products/socs/esp32
+* AP63300 Buck Converter: https://www.diodes.com/assets/Datasheets/AP63300.pdf
+* Sunlord Inductor (MPL2016S4R7MHT): http://www.sunlordinc.com
