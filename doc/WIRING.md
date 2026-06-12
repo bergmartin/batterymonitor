@@ -58,26 +58,28 @@ The custom PCB (located in the [pcb/](file:///home/martin/projects/batterymonito
 
 ### Custom PCB Architecture Block Diagram
 ```
-                        Custom PCB (All-in-One)
-                    ┌──────────────────────────────────┐
-                    │  12V Input (J1 Screw Terminal)   │
-                    │         │                        │
-                    │         ├──→ [AP63300 Buck]      │
-                    │         │    (12V → 3.3V)        │
-                    │         │         │              │
-                    │         │         └──→ 3.3V ───┐ │
-                    │         │                      │ │
-                    │         └─→ [Divider R1/R2]    │ │
-                    │                   │            │ │
-                    │                 GPIO34         │ │
-                    │                   │            │ │
-                    │                   ▼            ▼ │
-                    │           [ESP32-WROOM-32U module]
-                    │                   │              │
-                    │                   └──→ [J2 OLED] │
-                    └─────────────────────────│────────┘
-                                              ▼
-                                      SH1106 OLED (I2C)
+                              Custom PCB (All-in-One)
+                  ┌────────────────────────────────────────────────────────┐
+                  │ 12V Battery Input (J1 Terminal)                        │
+                  │        │                                               │
+                  │        ├──→ [D1 SS14] ──┐                              │
+                  │        │                ├──→ 12V Net ──→ [AP63300 Buck]│
+                  │        └─→ [Divider]    │                  (12V→3.3V)  │
+                  │                │        │                       │      │
+                  │             GPIO34      │                       ▼      │
+                  │                │        │                     3.3V     │
+                  │                │        │                      │       │
+                  │ USB-C (J3) ────┼─ [D2] ─┘                      │       │
+                  │    │           │                               │       │
+                  │    ├──→ [CH340C Bridge] ── [R5/R6] ── RXD0/TXD0 ───┤       │
+                  │    │       │                                   │       │
+                  │    │    [Q1/Q2 Auto-Reset] ─────────────────── EN/IO0  │
+                  │    │                                           │       │
+                  │    ▼                                           ▼       │
+                  │ [R7/R8 CC Pull-downs]                 [ESP32-WROOM-32U]│
+                  │                                                │       │
+                  │                                                └─→ OLED│
+                  └────────────────────────────────────────────────────────┘
 ```
 
 ### Integrated AP63300 Synchronous Buck Converter
@@ -85,6 +87,7 @@ Instead of using an external bulk module that regulates to 5V, the PCB integrate
 * **High Efficiency**: Operates at $>90\%$ efficiency, generating minimal heat compared to linear regulators (like the AMS1117 which wastes energy as heat).
 * **Direct 3.3V Power**: Steps the battery's 12V input directly down to **3.3V**, powering the ESP32 module (`U2`) directly.
 * **Low Noise (EMI)**: Features a frequency spread spectrum (FSS) clocking system operating at 500kHz to reduce electromagnetic interference.
+* **Dual-Source Power OR-ing**: Two Schottky barrier diodes (`D1` and `D2`, SS14) form an OR-ing power selector at the buck converter input (`12V` net). This allows safe concurrent connection of the 12V battery raw input and USB-C VBUS (5V) without back-feeding or damage. The AP63300's wide input voltage range (down to 3.8V in LDO mode) enables it to regulate to 3.3V from either source.
 
 #### AP63300 Supporting Passive Network
 The PCB utilizes the following optimized component layout:
@@ -98,6 +101,15 @@ The PCB utilizes the following optimized component layout:
 * **Input/Output Filtering (`C1`, `C2`)**:
   * Input capacitor $C_1$: $10\,\mu\text{F}$ 25V X5R ceramic capacitor (`C40894`) to handle voltage ripples.
   * Output capacitor $C_2$: $22\,\mu\text{F}$ 10V X5R ceramic capacitor (`C89572`) to stabilize the 3.3V rail.
+
+### USB-C Programming & Auto-Reset Interface
+To facilitate easy firmware updates and serial monitoring, the custom PCB includes an on-board USB-C receptacle (`J3`) and a **CH340C USB-to-UART bridge** (`U3`).
+* **Auto-Reset Circuitry**: A transistor-based reset network (`Q1`, `Q2`, `R9`, `R10`) toggles the ESP32's `EN` and `GPIO0` pins using the RTS and DTR signals from the CH340C. This puts the ESP32 automatically into programming/bootloader mode when firmware is uploaded, and resets it to run mode once complete.
+* **Type-C Negotiation**: Two 5.1kΩ pull-down resistors (`R7`, `R8`) on the CC1/CC2 pins advertise device capability, enabling standard Type-C power sources to negotiate and deliver 5V VBUS.
+* **Decoupling & Protection**: 
+  * A 100nF capacitor (`C5`) provides decoupling for the CH340C's supply.
+  * 1kΩ series resistors (`R5`, `R6`) protect the RXD and TXD signal lines.
+  * A 10kΩ pull-up resistor (`R11`) on the ESP32's `EN` pin ensures boot stability and noise rejection.
 
 ### Custom PCB Step-by-Step Instructions
 
