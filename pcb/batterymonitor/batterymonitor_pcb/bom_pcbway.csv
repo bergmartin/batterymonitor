@@ -20,3 +20,4 @@ Item,Designator,Qty,Value,Footprint,Manufacturer,MPN,LCSC Part Number,Descriptio
 19,"R7,R8",2,5.1k,Resistor_SMD:R_0805_2012Metric,UNI-ROYAL (Uniroyal Elec),0805W8F5101T5E,C27834,"Chip Resistor 5.1k Ohm 1/8W 1% 0805"
 20,"R9,R10,R11",3,10k,Resistor_SMD:R_0805_2012Metric,UNI-ROYAL (Uniroyal Elec),0805W8F1002T5E,C17414,"Chip Resistor 10k Ohm 1/8W 1% 0805"
 21,C5,1,100nF/10V,Capacitor_SMD:C_0805_2012Metric,FH (Guangdong Fenghua Advanced Tech),0805B104K500NT,C49678,"Multilayer Ceramic Capacitor, 100nF 50V X7R 0805"
+22,J4,1,DC_Jack_Female,Connector_BarrelJack:BarrelJack_Horizontal,XKB Connection,DC-005,C136605,"DC Power Jack 2.1mm, THT, Right Angle"

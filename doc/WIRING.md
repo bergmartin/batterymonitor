@@ -60,7 +60,7 @@ The custom PCB (located in the [pcb/](file:///home/martin/projects/batterymonito
 ```
                               Custom PCB (All-in-One)
                   ┌────────────────────────────────────────────────────────┐
-                  │ 12V Battery Input (J1 Terminal)                        │
+                  │ 12V Battery Input (J1 Terminal / J4 DC Jack)            │
                   │        │                                               │
                   │        ├──→ [D1 SS14] ──┐                              │
                   │        │                ├──→ 12V Net ──→ [AP63300 Buck]│
@@ -120,6 +120,7 @@ To facilitate easy firmware updates and serial monitoring, the custom PCB includ
 #### 2. Connect the Input:
 * Connect the battery positive (+) terminal through an inline 1A fuse to pin 1 of the screw terminal block `J1` (labeled `12V`).
 * Connect the battery negative (-) terminal to pin 2 of `J1` (labeled `GND`).
+* Alternatively, plug a 12V DC power adapter (center-positive, 5.5x2.1mm barrel plug) into the female DC input jack `J4`.
 
 #### 3. Connect the Display:
 * Connect the SH1106 OLED I2C display to the 4-pin female socket/header `J2`. Pinout mappings are:

@@ -26,3 +26,4 @@ S8050,Q2,Package_TO_SOT_SMD:SOT-23,C2146
 10k,R10,Resistor_SMD:R_0805_2012Metric,C17414
 10k,R11,Resistor_SMD:R_0805_2012Metric,C17414
 100nF/10V,C5,Capacitor_SMD:C_0805_2012Metric,C49678
+DC_Jack_Female,J4,Connector_BarrelJack:BarrelJack_Horizontal,C136605

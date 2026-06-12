@@ -640,6 +640,14 @@
     "meta": {
       "version": 1
     },
+    "ngspice": {
+      "fix_include_paths": true,
+      "meta": {
+        "version": 0
+      },
+      "model_mode": 4,
+      "workbook_filename": ""
+    },
     "page_layout_descr_file": "",
     "plot_directory": "",
     "reuse_designators": true,
@@ -649,13 +657,18 @@
       {
         "filename": "batterymonitor_pcb.kicad_sch",
         "name": "batterymonitor_pcb",
-        "uuid": "00000000-0000-0000-0000-000000000000"
+        "uuid": "cf7b8efb-97c5-4c23-b367-1f6a903260cb"
       }
     ],
-    "used_designators": "",
+    "used_designators": "#PWR1-2",
     "variants": []
   },
-  "sheets": [],
+  "sheets": [
+    [
+      "cf7b8efb-97c5-4c23-b367-1f6a903260cb",
+      "batterymonitor_pcb"
+    ]
+  ],
   "text_variables": {},
   "tuning_profiles": {
     "meta": {
