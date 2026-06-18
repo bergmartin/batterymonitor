@@ -57,6 +57,12 @@ namespace Config {
   // #define WIFI_PASSWORD "your-wifi-password"
   constexpr unsigned long WIFI_TIMEOUT_MS = 10000;  // 10 seconds to connect
   
+  // WiFi AP Configuration for Failover Portal
+  constexpr int WIFI_MAX_FAILURES = 3;             // Max consecutive failures before AP mode
+  constexpr char AP_SSID_PREFIX[] = "BatteryMonitor-";
+  constexpr char AP_PASSWORD[] = "admin123";      // Default WPA2 password (empty string for open network)
+  constexpr unsigned long AP_TIMEOUT_S = 300;       // 5 minutes timeout to prevent battery drain
+  
   // Static IP Configuration (set to false to use DHCP)
   constexpr bool USE_STATIC_IP = false;
   constexpr char STATIC_IP[] = "192.168.1.100";

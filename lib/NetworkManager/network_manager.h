@@ -10,6 +10,10 @@
 #include "battery_config.h"
 #include "config_manager.h"
 
+// Forward declarations
+class DisplayManager;
+class CommandHandler;
+
 class NetworkManager {
 private:
     WiFiClientSecure& wifiClient;
@@ -22,6 +26,7 @@ private:
     
     void mqttCallback(char* topic, byte* payload, unsigned int length);
     void publishHomeAssistantDiscovery();
+    String escapeHtml(const String& str);
     
 public:
     bool wifiConnected;
@@ -36,6 +41,7 @@ public:
     void publishReading(const BatteryReading& reading, int bootCount, time_t nextReadingTime = 0);
     void loop();
     void disconnect();
+    void startAPMode(const BatteryReading& reading, DisplayManager& display, CommandHandler& commandHandler);
 };
 
 #endif // NETWORK_MANAGER_H
