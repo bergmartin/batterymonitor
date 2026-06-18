@@ -234,6 +234,46 @@ void DisplayManager::showSleepScreen(time_t wakeupTime, const BatteryReading& re
     display.sendBuffer();
 }
 
+void DisplayManager::showAPScreen(const char* ssid, const char* ip, const BatteryReading& reading, unsigned long remainingTimeSec) {
+    if (!initialized) return;
+    
+    display.clearBuffer();
+    
+    // Header
+    display.setFont(u8g2_font_5x7_tr);
+    display.drawStr(0, 7, "WiFi Failover AP Mode");
+    display.drawHLine(0, 9, 128);
+    
+    // Credentials info
+    display.setFont(u8g2_font_6x10_tr);
+    display.drawStr(5, 20, "Connect to:");
+    
+    char ssidStr[32];
+    snprintf(ssidStr, sizeof(ssidStr), "SSID: %s", ssid);
+    display.drawStr(5, 31, ssidStr);
+    
+    char ipStr[32];
+    snprintf(ipStr, sizeof(ipStr), "Web: http://%s", ip);
+    display.drawStr(5, 42, ipStr);
+    
+    // Battery Info (voltage & percent)
+    display.setFont(u8g2_font_5x7_tr);
+    char battStr[32];
+    snprintf(battStr, sizeof(battStr), "Bat: %.2fV  %.0f%%", reading.voltage, reading.percentage);
+    display.drawStr(5, 52, battStr);
+    
+    // Draw battery icon next to it
+    drawBatteryIcon(100, 46, reading.percentage);
+    
+    // Countdown timer
+    display.drawHLine(0, 56, 128);
+    char timeStr[32];
+    snprintf(timeStr, sizeof(timeStr), "AP Timeout in: %lu s", remainingTimeSec);
+    display.drawStr(5, 63, timeStr);
+    
+    display.sendBuffer();
+}
+
 void DisplayManager::clear() {
     if (!initialized) return;
     display.clear();

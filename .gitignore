@@ -23,3 +23,7 @@ secret/
 **/*.kicad_sch~
 **/*.kicad_pcb~
 **/*.kicad_prl~
+cache
+.history
+
+.antigravitycli/

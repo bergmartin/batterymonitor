@@ -118,19 +118,13 @@ RUN_TEST(test_your_test_name);
 
 ## Known Issues
 
-### LiFePO4 Voltage Divider Warning
+### Voltage Divider Safety and ESP32 ADC Specs
 
-When testing with `BATTERY_TYPE=LIFEPO4`, the voltage divider safety test may show a warning:
+The voltage divider is configured using R1 = 100kΩ and R2 = 22kΩ resistors, resulting in a ratio of 5.545. This scales the maximum battery voltage down safely within the ESP32's ADC specifications (<= 3.3V) for both battery types:
+- **Lead-Acid**: Max 12.7V maps to 2.29V at the ADC (safe, < 3.3V)
+- **LiFePO4**: Max 14.6V maps to 2.63V at the ADC (safe, < 3.3V)
 
-```
-test_voltage_divider_safety: Max ADC voltage (3.65V) exceeds safe limit (3.3V)
-```
-
-This is expected behavior. The current 4:1 voltage divider ratio is optimized for Lead-Acid batteries. For LiFePO4 batteries (max 14.6V), a higher ratio (5:1 or 6:1) is recommended for maximum safety margin.
-
-**Recommended fix for LiFePO4:**
-- Use R1 = 47kΩ, R2 = 10kΩ (ratio = 5.7)
-- This brings 14.6V down to 2.56V (safe for ADC)
+The safety test `test_voltage_divider_safety` verifies that the scaled voltage remains strictly below the 3.3V reference voltage.
 
 ## Continuous Integration
 

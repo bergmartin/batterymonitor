@@ -7,8 +7,8 @@
  * Publishes readings to MQTT broker
  *
  * Hardware Setup:
- * - Battery + terminal -> R1 (30kΩ) -> ADC Pin (GPIO34) -> R2 (10kΩ) -> GND
- * - This creates a 4:1 voltage divider (12V becomes ~3V at ADC)
+ * - Battery + terminal -> R1 (100kΩ) -> ADC Pin (GPIO34) -> R2 (22kΩ) -> GND
+ * - This creates a 5.55:1 voltage divider (12V becomes ~2.16V at ADC)
  *
  * Power Consumption:
  * - Active: ~80-160 mA (during reading, ~5 seconds)
@@ -42,6 +42,7 @@
 RTC_DATA_ATTR int bootCount = 0;
 RTC_DATA_ATTR float lastVoltage = 0.0;
 RTC_DATA_ATTR bool applianceForcedOff = false;
+RTC_DATA_ATTR int wifiFailCount = 0;
 
 // Global objects
 BatteryMonitor monitor;
@@ -200,6 +201,7 @@ void setup()
     // Connect to WiFi for OTA
     if (network.connectWiFi())
     {
+      wifiFailCount = 0;
       otaManager.setup();
       otaManager.handleUpdate();
       // If we reach here, OTA timed out or failed
@@ -210,17 +212,18 @@ void setup()
     {
       Serial.println("Failed to connect to WiFi for OTA. Will retry next boot.");
     }
-  }if (display.isReady()) {
-      display.showOTAScreen("Checking...");
-    }
-    
-    
+  }
   // Automatically check for available updates on every wake
   else if (Config::AUTO_CHECK_OTA)
   {
+    if (display.isReady()) {
+      display.showOTAScreen("Checking...");
+    }
+    
     // Connect to WiFi to check for updates
     if (network.connectWiFi())
     {
+      wifiFailCount = 0;
       // Check if a newer version is available
       if (otaManager.checkForUpdates())
       {
@@ -322,6 +325,9 @@ void loop()
   Serial.println("\n─────────────────────────────────");
   if (network.connectWiFi())
   {
+    // Reset consecutive failures on success
+    wifiFailCount = 0;
+    
     // Get WiFi RSSI
     int8_t rssi = WiFi.RSSI();
     
@@ -371,11 +377,25 @@ void loop()
         }
       }
     }
-    // ...
+    
     // Disconnect to save power (unless in OTA mode)
     if (!otaManager.isUpdateRequested())
     {
       network.disconnect();
+    }
+  }
+  else
+  {
+    wifiFailCount++;
+    Serial.printf("WiFi connection failed. Consecutive failures: %d/%d\n", wifiFailCount, Config::WIFI_MAX_FAILURES);
+    
+    if (wifiFailCount >= Config::WIFI_MAX_FAILURES)
+    {
+      // Reset fail count before entering AP mode (so we start fresh next time)
+      wifiFailCount = 0;
+      
+      // Start configuration portal
+      network.startAPMode(reading, display, commandHandler);
     }
   }
   Serial.println("─────────────────────────────────");

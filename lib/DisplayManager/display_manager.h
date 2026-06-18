@@ -39,6 +39,7 @@ public:
     void showOTAComplete();
     void showOTAError(const char* error);
     void showSleepScreen(time_t wakeupTime, const BatteryReading& reading);
+    void showAPScreen(const char* ssid, const char* ip, const BatteryReading& reading, unsigned long remainingTimeSec);
     
     // Clear display
     void clear();

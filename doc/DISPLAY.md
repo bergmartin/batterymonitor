@@ -57,7 +57,7 @@ When combined with the battery monitor circuit:
 ```
 12V Battery
     │
-    ├─── R1 (30kΩ) ─── GPIO 34 (ADC) ─── R2 (10kΩ) ─── GND
+    ├─── R1 (100kΩ) ─── GPIO 34 (ADC) ─── R2 (22kΩ) ─── GND
     │
     └─── Power Supply (12V to 5V converter)
               │

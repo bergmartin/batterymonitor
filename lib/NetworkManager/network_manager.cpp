@@ -1,6 +1,10 @@
 #include "network_manager.h"
 #include <time.h>
 #include "../../include/mqtt_credentials.h"
+#include "display_manager.h"
+#include "command_handler.h"
+#include <WebServer.h>
+#include <WiFiAP.h>
 
 NetworkManager::NetworkManager(WiFiClientSecure& wifi, PubSubClient& mqtt, ConfigManager& cfg)
     : wifiClient(wifi), mqttClient(mqtt), config(cfg), 
@@ -530,5 +534,419 @@ void NetworkManager::mqttCallback(char* topic, byte* payload, unsigned int lengt
         config.saveConfig();
         Serial.print("Appliance target state updated via MQTT: ");
         Serial.println(config.applianceTargetState ? "ON" : "OFF");
+    }
+}
+
+// HTML templates for the configuration portal
+const char PORTAL_HTML[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battery Monitor Config Portal</title>
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #f8fafc;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  padding: 30px;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+}
+h2 {
+  margin-top: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #0ea5e9;
+  text-align: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 15px;
+}
+.group {
+  margin-bottom: 18px;
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+input[type="text"], input[type="password"], select {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0f172a;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  color: #f8fafc;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+.checkbox-group input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: #0ea5e9;
+}
+.checkbox-group label {
+  margin-bottom: 0;
+  text-transform: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.2);
+  margin-top: 15px;
+}
+button:hover {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.3);
+}
+.footer {
+  text-align: center;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 20px;
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>Battery Monitor Config</h2>
+  <form action="/save" method="POST">
+    <div class="group">
+      <label for="wifi_select">Available Networks</label>
+      <select id="wifi_select" onchange="document.getElementById('wifi_ssid').value = this.value;">
+        {WIFI_LIST}
+      </select>
+    </div>
+    <div class="group">
+      <label for="wifi_ssid">WiFi SSID</label>
+      <input type="text" id="wifi_ssid" name="wifi_ssid" placeholder="Enter SSID" value="{SSID_VALUE}" required>
+    </div>
+    <div class="group">
+      <label for="wifi_pass">WiFi Password</label>
+      <input type="password" id="wifi_pass" name="wifi_pass" placeholder="Enter Password" value="">
+    </div>
+    <div class="group">
+      <label for="mqtt_srv">MQTT Broker IP / Host</label>
+      <input type="text" id="mqtt_srv" name="mqtt_srv" placeholder="e.g. 192.168.1.100" value="{MQTT_SRV_VALUE}" required>
+    </div>
+    <div class="group">
+      <label for="mqtt_port">MQTT Port</label>
+      <input type="text" id="mqtt_port" name="mqtt_port" placeholder="1883" value="{MQTT_PORT_VALUE}" required>
+    </div>
+    <div class="group">
+      <label for="mqtt_user">MQTT Username (Optional)</label>
+      <input type="text" id="mqtt_user" name="mqtt_user" placeholder="e.g. user" value="{MQTT_USER_VALUE}">
+    </div>
+    <div class="group">
+      <label for="mqtt_pass">MQTT Password (Optional)</label>
+      <input type="password" id="mqtt_pass" name="mqtt_pass" placeholder="e.g. password" value="">
+    </div>
+    <div class="group">
+      <label for="mqtt_id">MQTT Client ID</label>
+      <input type="text" id="mqtt_id" name="mqtt_id" placeholder="e.g. esp32-battery" value="{MQTT_ID_VALUE}" required>
+    </div>
+    <div class="group">
+      <label for="battery_type">Battery Chemistry</label>
+      <select id="battery_type" name="battery_type">
+        {BATT_TYPE_OPTIONS}
+      </select>
+    </div>
+    <div class="group checkbox-group">
+      <input type="checkbox" id="deep_sleep" name="deep_sleep" value="true" {DEEP_SLEEP_CHECKED}>
+      <label for="deep_sleep">Enable Deep Sleep (Power Saving)</label>
+    </div>
+    <button type="submit">Save &amp; Connect</button>
+  </form>
+  <div class="footer">ESP32 Battery Monitor Config Portal</div>
+</div>
+</body>
+</html>
+)rawliteral";
+
+const char SAVED_HTML[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings Saved</title>
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #f8fafc;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  padding: 40px 30px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+.icon {
+  font-size: 48px;
+  color: #22c55e;
+  margin-bottom: 15px;
+}
+h2 {
+  margin-top: 0;
+  color: #22c55e;
+  font-size: 22px;
+}
+p {
+  color: #94a3b8;
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 25px;
+}
+.spinner {
+  border: 3px solid rgba(14, 165, 233, 0.1);
+  width: 36px;
+  height: 36px;
+  clear: both;
+  margin: 20px auto;
+  border-top-color: #0ea5e9;
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">&#x2714;</div>
+  <h2>Configuration Saved!</h2>
+  <p>Settings saved successfully. The device is restarting now to connect to the new WiFi network...</p>
+  <div class="spinner"></div>
+</div>
+</body>
+</html>
+)rawliteral";
+
+String NetworkManager::escapeHtml(const String& str) {
+    String escaped = "";
+    for (size_t i = 0; i < str.length(); ++i) {
+        char c = str[i];
+        switch (c) {
+            case '&':  escaped += "&amp;"; break;
+            case '<':  escaped += "&lt;"; break;
+            case '>':  escaped += "&gt;"; break;
+            case '"':  escaped += "&quot;"; break;
+            case '\'': escaped += "&#x27;"; break;
+            case '/':  escaped += "&#x2F;"; break;
+            default:   escaped += c; break;
+        }
+    }
+    return escaped;
+}
+
+void NetworkManager::startAPMode(const BatteryReading& reading, DisplayManager& display, CommandHandler& commandHandler) {
+    Serial.println("\n╔═══════════════════════════════════════╗");
+    Serial.println("║   Entering WiFi Config AP Mode        ║");
+    Serial.println("╚═══════════════════════════════════════╝");
+    
+    // 1. Disconnect current WiFi connection
+    WiFi.disconnect(true);
+    delay(500);
+    
+    // 2. Scan networks
+    Serial.println("Scanning local WiFi networks...");
+    int n = WiFi.scanNetworks();
+    Serial.printf("Found %d networks.\n", n);
+    
+    String wifiList = "";
+    if (n <= 0) {
+        wifiList = "<option value=\"\">No networks found</option>";
+    } else {
+        wifiList = "<option value=\"\">-- Select a network --</option>";
+        for (int i = 0; i < n; ++i) {
+            String ssid = WiFi.SSID(i);
+            int32_t rssi = WiFi.RSSI(i);
+            String escaped = escapeHtml(ssid);
+            wifiList += "<option value=\"" + escaped + "\">" + escaped + " (" + String(rssi) + " dBm)</option>";
+        }
+    }
+    
+    // 3. Generate SSID & start softAP
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    char apSsid[32];
+    snprintf(apSsid, sizeof(apSsid), "%s%02X%02X", Config::AP_SSID_PREFIX, mac[4], mac[5]);
+    
+    WiFi.mode(WIFI_AP);
+    bool apStarted = false;
+    if (strlen(Config::AP_PASSWORD) > 0) {
+        apStarted = WiFi.softAP(apSsid, Config::AP_PASSWORD);
+    } else {
+        apStarted = WiFi.softAP(apSsid);
+    }
+    
+    if (!apStarted) {
+        Serial.println("Failed to start softAP!");
+        return;
+    }
+    
+    IPAddress apIP = WiFi.softAPIP();
+    Serial.print("Access Point started successfully.\nSSID: ");
+    Serial.println(apSsid);
+    Serial.print("IP Address: ");
+    Serial.println(apIP);
+    
+    // 4. Start Web Server
+    WebServer server(80);
+    bool rebootRequested = false;
+    
+    server.on("/", HTTP_GET, [&]() {
+        String page = String(PORTAL_HTML);
+        page.replace("{WIFI_LIST}", wifiList);
+        page.replace("{SSID_VALUE}", escapeHtml(config.wifiSSID));
+        page.replace("{MQTT_SRV_VALUE}", escapeHtml(config.mqttServer));
+        page.replace("{MQTT_PORT_VALUE}", String(config.mqttPort));
+        page.replace("{MQTT_USER_VALUE}", escapeHtml(config.mqttUser));
+        page.replace("{MQTT_ID_VALUE}", escapeHtml(config.mqttClientID));
+        
+        String batteryOptions = "";
+        if (config.batteryType.equalsIgnoreCase("lifepo4")) {
+            batteryOptions = "<option value=\"lifepo4\" selected>LiFePO4</option><option value=\"leadacid\">Lead-Acid</option>";
+        } else {
+            batteryOptions = "<option value=\"lifepo4\">LiFePO4</option><option value=\"leadacid\" selected>Lead-Acid</option>";
+        }
+        page.replace("{BATT_TYPE_OPTIONS}", batteryOptions);
+        page.replace("{DEEP_SLEEP_CHECKED}", config.deepSleepEnabled ? "checked" : "");
+        
+        server.send(200, "text/html", page);
+    });
+    
+    server.on("/save", HTTP_POST, [&]() {
+        if (server.hasArg("wifi_ssid")) {
+            config.wifiSSID = server.arg("wifi_ssid");
+        }
+        if (server.hasArg("wifi_pass") && server.arg("wifi_pass").length() > 0) {
+            config.wifiPassword = server.arg("wifi_pass");
+        }
+        if (server.hasArg("mqtt_srv")) {
+            config.mqttServer = server.arg("mqtt_srv");
+        }
+        if (server.hasArg("mqtt_port")) {
+            config.mqttPort = server.arg("mqtt_port").toInt();
+        }
+        if (server.hasArg("mqtt_user")) {
+            config.mqttUser = server.arg("mqtt_user");
+        }
+        if (server.hasArg("mqtt_pass") && server.arg("mqtt_pass").length() > 0) {
+            config.mqttPassword = server.arg("mqtt_pass");
+        }
+        if (server.hasArg("mqtt_id")) {
+            config.mqttClientID = server.arg("mqtt_id");
+        }
+        if (server.hasArg("battery_type")) {
+            config.batteryType = server.arg("battery_type");
+        }
+        config.deepSleepEnabled = server.hasArg("deep_sleep") && (server.arg("deep_sleep") == "true" || server.arg("deep_sleep") == "on");
+        
+        config.saveConfig();
+        
+        server.send(200, "text/html", String(SAVED_HTML));
+        rebootRequested = true;
+    });
+    
+    server.begin();
+    Serial.println("Web server started on port 80.");
+    
+    // 5. Handle portal loop with timeout
+    unsigned long startMs = millis();
+    unsigned long lastUpdateMs = 0;
+    
+    while (!rebootRequested) {
+        unsigned long now = millis();
+        unsigned long elapsedS = (now - startMs) / 1000;
+        
+        if (elapsedS >= Config::AP_TIMEOUT_S) {
+            Serial.println("AP mode timed out. Restarting...");
+            break;
+        }
+        
+        server.handleClient();
+        commandHandler.checkCommands();
+        
+        if (now - lastUpdateMs >= 1000) {
+            lastUpdateMs = now;
+            unsigned long remainingS = Config::AP_TIMEOUT_S - elapsedS;
+            
+            // Show AP information on SH1106 Display
+            display.showAPScreen(apSsid, apIP.toString().c_str(), reading, remainingS);
+            
+            // Print progress via serial
+            Serial.printf("AP Mode active... %lu s remaining.\n", remainingS);
+        }
+        
+        delay(20);
+    }
+    
+    // 6. Cleanup
+    server.stop();
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_OFF);
+    
+    Serial.println("Access Point stopped.");
+    
+    if (rebootRequested) {
+        Serial.println("Rebooting in 2 seconds...");
+        delay(2000);
+        ESP.restart();
     }
 }
